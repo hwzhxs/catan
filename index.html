@@ -9,36 +9,36 @@
 :root{
 --wood:#2d8a4e;--brick:#c0392b;--sheep:#7dce82;--wheat:#f1c40f;--ore:#7f8c8d;--desert:#f4e4c1;
 --p1:#e74c3c;--p2:#3498db;--p3:#f39c12;--p4:#2ecc71;
---bg:#1a2634;--panel:#1e3044;--text:#ecf0f1;--border:#34495e;
+--bg:#7a5c2e;--panel:#f4e8d0;--text:#3a2a1a;--border:#c4a265;
 }
-body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(--text);overflow-x:hidden;min-height:100vh}
+body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);background-image:repeating-linear-gradient(90deg,rgba(0,0,0,0.03) 0px,transparent 2px,transparent 20px),repeating-linear-gradient(0deg,rgba(0,0,0,0.02) 0px,transparent 1px,transparent 8px);color:var(--text);overflow-x:hidden;min-height:100vh}
 #app{display:flex;flex-direction:column;height:100vh}
 
 /* Top bar */
-#topbar{display:flex;align-items:center;justify-content:space-between;padding:8px 16px;background:var(--panel);border-bottom:1px solid var(--border);flex-shrink:0}
-#topbar h1{font-size:1.2rem;letter-spacing:2px}
-#phase-info{font-size:0.9rem;opacity:0.8}
-#turn-info{font-size:0.9rem;color:#f39c12;font-weight:bold}
+#topbar{display:flex;align-items:center;justify-content:space-between;padding:10px 20px;background:linear-gradient(to bottom,#8B6914,#6d5210);border-bottom:2px solid #c4a265;flex-shrink:0;box-shadow:0 2px 8px rgba(0,0,0,0.3)}
+#topbar h1{font-size:1.3rem;letter-spacing:2px;color:#fdf6e3;text-shadow:0 1px 3px rgba(0,0,0,0.4)}
+#phase-info{font-size:0.9rem;color:#fdf6e3;opacity:0.9}
+#turn-info{font-size:0.9rem;color:#fde68a;font-weight:bold;text-shadow:0 1px 2px rgba(0,0,0,0.3)}
 
 /* Main layout */
 #main{display:flex;flex:1;overflow:hidden}
 
 /* Board area */
-#board-area{flex:1;display:flex;align-items:center;justify-content:center;position:relative;min-width:0}
+#board-area{flex:1;display:flex;align-items:center;justify-content:center;position:relative;min-width:0;background:linear-gradient(135deg,#5a7a3a 0%,#6d8a4a 30%,#5a7a3a 70%,#4a6a2a 100%)}
 #board-canvas{cursor:pointer}
 
 /* Right panel */
-#right-panel{width:340px;flex-shrink:0;background:var(--panel);border-left:1px solid var(--border);display:flex;flex-direction:column;overflow-y:auto}
+#right-panel{width:340px;flex-shrink:0;background:var(--panel);border-left:3px solid var(--border);display:flex;flex-direction:column;overflow-y:auto;box-shadow:-3px 0 10px rgba(0,0,0,0.15)}
 
 /* Player cards */
-.player-card{padding:10px 14px;border-bottom:1px solid var(--border);transition:background 0.2s}
-.player-card.active{background:rgba(255,255,255,0.08)}
+.player-card{padding:10px 14px;border-bottom:1px solid var(--border);border-left:4px solid transparent;transition:all 0.2s;background:rgba(255,250,240,0.5)}
+.player-card.active{background:rgba(255,248,220,0.9);box-shadow:0 0 12px rgba(218,165,32,0.5)}
 .player-header{display:flex;align-items:center;gap:8px;margin-bottom:6px}
 .player-dot{width:14px;height:14px;border-radius:50%;flex-shrink:0}
 .player-name{font-weight:bold;font-size:0.95rem}
 .player-vp{margin-left:auto;font-size:0.85rem;opacity:0.7}
 .player-resources{display:flex;gap:4px;flex-wrap:wrap}
-.res-badge{display:inline-flex;align-items:center;gap:3px;padding:2px 7px;border-radius:10px;font-size:0.78rem;background:rgba(255,255,255,0.1)}
+.res-badge{display:inline-flex;align-items:center;gap:3px;padding:2px 7px;border-radius:10px;font-size:0.78rem;background:rgba(139,105,20,0.12);border:1px solid rgba(196,162,101,0.3)}
 .res-icon{width:10px;height:10px;border-radius:2px;display:inline-block}
 .player-extras{display:flex;gap:8px;margin-top:4px;font-size:0.75rem;opacity:0.7}
 
@@ -46,34 +46,35 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(
 #actions{padding:12px 14px;border-top:1px solid var(--border);flex-shrink:0}
 #actions h3{font-size:0.9rem;margin-bottom:8px}
 .btn-row{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px}
-.btn{padding:6px 14px;border:1px solid var(--border);border-radius:6px;background:rgba(255,255,255,0.06);color:var(--text);cursor:pointer;font-size:0.82rem;transition:all 0.2s}
-.btn:hover:not(:disabled){background:rgba(255,255,255,0.15)}
-.btn:disabled{opacity:0.3;cursor:default}
-.btn.primary{background:#2980b9;border-color:#2980b9}
-.btn.danger{background:#c0392b;border-color:#c0392b}
+.btn{padding:6px 14px;border:2px solid #c4a265;border-radius:8px;background:linear-gradient(to bottom,#f5e6c8,#e8d5aa);color:#5a3e1b;cursor:pointer;font-size:0.82rem;transition:all 0.2s;box-shadow:0 2px 4px rgba(0,0,0,0.15);font-weight:500}
+.btn:hover:not(:disabled){background:linear-gradient(to bottom,#fdf0d5,#f0dfb8);box-shadow:0 3px 6px rgba(0,0,0,0.2)}
+.btn:disabled{opacity:0.35;cursor:default;box-shadow:none}
+.btn.primary{background:linear-gradient(to bottom,#d4a24e,#b8860b);border-color:#8b6914;color:#fff;text-shadow:0 1px 2px rgba(0,0,0,0.3)}
+.btn.primary:hover:not(:disabled){background:linear-gradient(to bottom,#e0b050,#c49412)}
+.btn.danger{background:linear-gradient(to bottom,#e05050,#c0392b);border-color:#a02020;color:#fff;text-shadow:0 1px 2px rgba(0,0,0,0.3)}
 
 /* Dice */
-#dice-area{text-align:center;padding:10px;border-bottom:1px solid var(--border)}
+#dice-area{text-align:center;padding:12px;border-bottom:2px solid var(--border);background:rgba(255,248,230,0.4)}
 .dice-container{display:flex;justify-content:center;gap:16px;margin-bottom:8px}
-.die{width:52px;height:52px;background:#fff;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:1.6rem;font-weight:bold;color:#333;box-shadow:0 3px 10px rgba(0,0,0,0.3);transition:transform 0.3s}
+.die{width:52px;height:52px;background:linear-gradient(135deg,#fff,#f5f0e0);border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:1.6rem;font-weight:bold;color:#3a2a1a;box-shadow:0 3px 10px rgba(0,0,0,0.25),inset 0 1px 2px rgba(255,255,255,0.8);transition:transform 0.3s;border:2px solid #c4a265}
 .die.rolling{animation:diceRoll 0.4s ease-out}
 @keyframes diceRoll{0%{transform:rotateZ(0)}25%{transform:rotateZ(15deg) scale(1.1)}50%{transform:rotateZ(-10deg)}75%{transform:rotateZ(5deg)}100%{transform:rotateZ(0)}}
 
 /* Log */
-#log{flex:1;overflow-y:auto;padding:10px 14px;font-size:0.78rem;line-height:1.5}
-#log div{padding:2px 0;border-bottom:1px solid rgba(255,255,255,0.03)}
+#log{flex:1;overflow-y:auto;padding:10px 14px;font-size:0.78rem;line-height:1.5;background:rgba(244,232,208,0.6)}
+#log div{padding:2px 0;border-bottom:1px solid rgba(139,105,20,0.1)}
 
 /* Modals */
 .modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.6);display:flex;align-items:center;justify-content:center;z-index:100;display:none}
 .modal-overlay.show{display:flex}
-.modal{background:var(--panel);border:1px solid var(--border);border-radius:12px;padding:20px 24px;min-width:320px;max-width:500px;max-height:80vh;overflow-y:auto}
+.modal{background:#fdf6e3;border:3px solid #b8860b;border-radius:12px;padding:20px 24px;min-width:320px;max-width:500px;max-height:80vh;overflow-y:auto;box-shadow:0 8px 32px rgba(0,0,0,0.4);color:#3a2a1a}
 .modal h2{margin-bottom:12px;font-size:1.1rem}
 .modal-btns{display:flex;gap:8px;margin-top:14px;justify-content:flex-end}
 
 /* Trade UI */
 .trade-row{display:flex;align-items:center;gap:8px;margin:6px 0}
 .trade-row label{width:50px;font-size:0.85rem}
-.trade-row input{width:50px;padding:4px;border:1px solid var(--border);border-radius:4px;background:rgba(255,255,255,0.1);color:var(--text);text-align:center}
+.trade-row input{width:50px;padding:4px;border:1px solid #c4a265;border-radius:4px;background:rgba(255,255,255,0.7);color:#3a2a1a;text-align:center}
 .trade-section{margin:8px 0}
 .trade-section h4{font-size:0.85rem;margin-bottom:4px;opacity:0.7}
 
@@ -85,23 +86,23 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(
 .discard-row label{width:50px;font-size:0.85rem}
 
 /* Setup hint */
-#setup-hint{position:absolute;bottom:20px;left:50%;transform:translateX(-50%);background:rgba(0,0,0,0.8);padding:8px 20px;border-radius:8px;font-size:0.9rem;pointer-events:none;z-index:10}
+#setup-hint{position:absolute;bottom:20px;left:50%;transform:translateX(-50%);background:rgba(90,62,27,0.92);padding:10px 24px;border-radius:8px;font-size:0.9rem;pointer-events:none;z-index:10;color:#fdf6e3;border:2px solid #c4a265;box-shadow:0 4px 12px rgba(0,0,0,0.3)}
 
 /* Toast */
-#toast{position:fixed;top:20px;left:50%;transform:translateX(-50%);background:#2ecc71;color:#fff;padding:10px 24px;border-radius:8px;font-size:0.9rem;z-index:200;display:none;box-shadow:0 4px 20px rgba(0,0,0,0.3)}
+#toast{position:fixed;top:20px;left:50%;transform:translateX(-50%);background:linear-gradient(to bottom,#d4a24e,#b8860b);color:#fff;padding:10px 24px;border-radius:8px;font-size:0.9rem;z-index:200;display:none;box-shadow:0 4px 20px rgba(0,0,0,0.3);border:2px solid #c4a265}
 
 /* Winner screen */
-#winner-screen{position:fixed;inset:0;background:rgba(0,0,0,0.85);display:none;align-items:center;justify-content:center;z-index:300;flex-direction:column}
+#winner-screen{position:fixed;inset:0;background:rgba(60,40,10,0.9);display:none;align-items:center;justify-content:center;z-index:300;flex-direction:column}
 #winner-screen.show{display:flex}
-#winner-screen h1{font-size:2.5rem;margin-bottom:10px}
-#winner-screen p{font-size:1.2rem;opacity:0.8;margin-bottom:20px}
+#winner-screen h1{font-size:2.5rem;margin-bottom:10px;color:#fde68a;text-shadow:0 2px 8px rgba(0,0,0,0.5)}
+#winner-screen p{font-size:1.2rem;opacity:0.9;margin-bottom:20px;color:#fdf6e3}
 
 /* Setup screen */
 #setup-screen{padding:20px}
 #setup-screen h3{margin-bottom:12px}
-.setup-player-row{display:flex;align-items:center;gap:10px;margin:8px 0;padding:8px 12px;border-radius:8px;background:rgba(255,255,255,0.04)}
+.setup-player-row{display:flex;align-items:center;gap:10px;margin:8px 0;padding:8px 12px;border-radius:8px;background:rgba(139,105,20,0.08);border:1px solid rgba(196,162,101,0.3)}
 .setup-player-row .player-dot{width:18px;height:18px;border-radius:50%;flex-shrink:0}
-.setup-player-row select,.setup-player-row input{padding:4px 8px;border:1px solid var(--border);border-radius:4px;background:rgba(255,255,255,0.1);color:var(--text);font-size:0.85rem}
+.setup-player-row select,.setup-player-row input{padding:4px 8px;border:1px solid #c4a265;border-radius:4px;background:rgba(255,255,255,0.7);color:#3a2a1a;font-size:0.85rem}
 .setup-player-row input{width:100px}
 .setup-player-row select{width:80px}
 .setup-error{color:#e74c3c;font-size:0.82rem;margin-top:6px;display:none}
@@ -1389,10 +1390,44 @@ function render() {
   if (!G.tiles) return;
   ctx.clearRect(0, 0, canvasW, canvasH);
   
-  ctx.fillStyle = '#1a5276';
+  // Green felt background
+  ctx.fillStyle = '#3a6b35';
   ctx.fillRect(0, 0, canvasW, canvasH);
   
   let size = G.hexSize;
+  
+  // Ocean hex behind the board
+  let centerTile = G.tiles[9];
+  if (centerTile) {
+    let cs = toScreen(centerTile.px, centerTile.py);
+    let oceanR = size * scale * 4.5;
+    // Ocean gradient
+    let grad = ctx.createRadialGradient(cs.x, cs.y, size*scale*2, cs.x, cs.y, oceanR);
+    grad.addColorStop(0, '#3a8abf');
+    grad.addColorStop(0.6, '#2c6f9f');
+    grad.addColorStop(1, '#1a4a6f');
+    ctx.fillStyle = grad;
+    drawHexPath(cs.x, cs.y, oceanR);
+    ctx.fill();
+    // Subtle wave lines
+    ctx.strokeStyle = 'rgba(255,255,255,0.06)';
+    ctx.lineWidth = 1;
+    for (let w = -6; w <= 6; w++) {
+      let wy = cs.y + w * size * scale * 0.5;
+      ctx.beginPath();
+      for (let wx = -oceanR; wx <= oceanR; wx += 8) {
+        let x = cs.x + wx;
+        let y = wy + Math.sin(wx * 0.03 + w) * 6;
+        if (wx === -oceanR) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+      }
+      ctx.stroke();
+    }
+    // Ocean border ring
+    ctx.strokeStyle = '#1a3a5a';
+    ctx.lineWidth = 3;
+    drawHexPath(cs.x, cs.y, oceanR);
+    ctx.stroke();
+  }
   
   G.tiles.forEach((t, ti) => {
     let center = toScreen(t.px, t.py);
@@ -1431,12 +1466,22 @@ function render() {
     let s2 = toScreen(G.vertices[e.v2].x, G.vertices[e.v2].y);
     
     if (e.road !== -1) {
-      ctx.strokeStyle = G.players[e.road].color;
-      ctx.lineWidth = 5;
+      // Road outline
+      ctx.strokeStyle = 'rgba(0,0,0,0.4)';
+      ctx.lineWidth = 9;
+      ctx.lineCap = 'round';
       ctx.beginPath();
       ctx.moveTo(s1.x, s1.y);
       ctx.lineTo(s2.x, s2.y);
       ctx.stroke();
+      // Road color
+      ctx.strokeStyle = G.players[e.road].color;
+      ctx.lineWidth = 7;
+      ctx.beginPath();
+      ctx.moveTo(s1.x, s1.y);
+      ctx.lineTo(s2.x, s2.y);
+      ctx.stroke();
+      ctx.lineCap = 'butt';
     }
     if (highlightEdges.includes(ei)) {
       ctx.strokeStyle = ei === hoverEdge ? 'rgba(255,255,255,0.8)' : 'rgba(255,255,255,0.3)';
@@ -1472,15 +1517,18 @@ function render() {
   if (G.robberTile >= 0 && G.tiles[G.robberTile]) {
     let t = G.tiles[G.robberTile];
     let s = toScreen(t.px, t.py);
-    ctx.fillStyle = 'rgba(0,0,0,0.7)';
-    ctx.beginPath();
-    ctx.arc(s.x, s.y + 6, 12, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.fillStyle = '#fff';
-    ctx.font = 'bold 14px sans-serif';
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-    ctx.fillText('🥷', s.x, s.y + 6);
+    // Shadow
+    ctx.fillStyle = 'rgba(0,0,0,0.4)';
+    ctx.beginPath(); ctx.ellipse(s.x+1, s.y+14, 10, 4, 0, 0, Math.PI*2); ctx.fill();
+    // Body
+    ctx.fillStyle = '#2a2a2a';
+    ctx.beginPath(); ctx.arc(s.x, s.y+2, 10, 0, Math.PI*2); ctx.fill();
+    // Head
+    ctx.beginPath(); ctx.arc(s.x, s.y-10, 7, 0, Math.PI*2); ctx.fill();
+    // Eyes
+    ctx.fillStyle = '#ff4444';
+    ctx.beginPath(); ctx.arc(s.x-3, s.y-11, 2, 0, Math.PI*2); ctx.fill();
+    ctx.beginPath(); ctx.arc(s.x+3, s.y-11, 2, 0, Math.PI*2); ctx.fill();
   }
   
   // Highlight tiles for robber movement
@@ -1510,42 +1558,175 @@ function drawHex(cx, cy, size, tile, ti) {
   ctx.closePath();
   
   let colors = {
-    wood: '#2d8a4e', brick: '#c0392b', sheep: '#90d890',
-    wheat: '#e8c43a', ore: '#8095a0', desert: '#e8dcc0'
+    wood: '#2d8a4e', brick: '#c0392b', sheep: '#8ed98e',
+    wheat: '#daa520', ore: '#6d7b8d', desert: '#d4b896'
   };
   ctx.fillStyle = colors[tile.type] || '#888';
   ctx.fill();
-  ctx.strokeStyle = 'rgba(0,0,0,0.3)';
-  ctx.lineWidth = 2;
+  
+  // Clip for textures
+  ctx.save();
+  ctx.clip();
+  
+  if (tile.type === 'wood') {
+    // Draw multiple trees
+    let trees = [{x:cx-s*0.25,y:cy-s*0.05,h:20},{x:cx+s*0.1,y:cy+s*0.05,h:18},{x:cx-s*0.05,y:cy-s*0.25,h:16},{x:cx+s*0.25,y:cy-s*0.1,h:15},{x:cx-s*0.15,y:cy+s*0.2,h:14}];
+    trees.forEach(t => {
+      let sc = t.h/20;
+      // Trunk
+      ctx.fillStyle = '#5a3a1a';
+      ctx.fillRect(t.x-1.5*sc, t.y+6*sc, 3*sc, 10*sc);
+      // Layers
+      ctx.fillStyle = '#1a6b35';
+      ctx.beginPath(); ctx.moveTo(t.x, t.y-14*sc); ctx.lineTo(t.x+10*sc, t.y+2*sc); ctx.lineTo(t.x-10*sc, t.y+2*sc); ctx.closePath(); ctx.fill();
+      ctx.fillStyle = '#1f7a3d';
+      ctx.beginPath(); ctx.moveTo(t.x, t.y-8*sc); ctx.lineTo(t.x+8*sc, t.y+8*sc); ctx.lineTo(t.x-8*sc, t.y+8*sc); ctx.closePath(); ctx.fill();
+    });
+  } else if (tile.type === 'brick') {
+    // Clay hills
+    ctx.fillStyle = '#a83229';
+    ctx.beginPath();
+    ctx.moveTo(cx-s*0.5, cy+s*0.3);
+    ctx.quadraticCurveTo(cx-s*0.15, cy-s*0.35, cx+s*0.1, cy+s*0.1);
+    ctx.quadraticCurveTo(cx+s*0.35, cy-s*0.2, cx+s*0.5, cy+s*0.3);
+    ctx.fill();
+    // Brick lines
+    ctx.strokeStyle = 'rgba(0,0,0,0.12)';
+    ctx.lineWidth = 0.8;
+    for (let row = 0; row < 5; row++) {
+      let y = cy - s*0.25 + row * s*0.12;
+      ctx.beginPath(); ctx.moveTo(cx-s*0.4, y); ctx.lineTo(cx+s*0.4, y); ctx.stroke();
+      for (let col = 0; col < 4; col++) {
+        let x = cx - s*0.3 + col * s*0.2 + (row%2)*s*0.1;
+        ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x, y+s*0.12); ctx.stroke();
+      }
+    }
+  } else if (tile.type === 'sheep') {
+    // Rolling green hills
+    ctx.fillStyle = '#6bc26b';
+    ctx.beginPath();
+    ctx.moveTo(cx-s*0.5, cy+s*0.3);
+    ctx.quadraticCurveTo(cx-s*0.2, cy-s*0.05, cx, cy+s*0.15);
+    ctx.quadraticCurveTo(cx+s*0.25, cy-s*0.08, cx+s*0.5, cy+s*0.3);
+    ctx.fill();
+    // Sheep blobs
+    let sheepPos = [{x:cx-s*0.15,y:cy+s*0.08},{x:cx+s*0.12,y:cy+s*0.15},{x:cx+s*0.02,y:cy-s*0.05}];
+    sheepPos.forEach(sp => {
+      ctx.fillStyle = '#fff';
+      ctx.beginPath(); ctx.arc(sp.x, sp.y, 5, 0, Math.PI*2); ctx.fill();
+      ctx.fillStyle = '#333';
+      ctx.beginPath(); ctx.arc(sp.x+3, sp.y-2, 2, 0, Math.PI*2); ctx.fill();
+    });
+  } else if (tile.type === 'wheat') {
+    // Wheat field
+    ctx.fillStyle = '#c9a020';
+    ctx.fillRect(cx-s*0.4, cy-s*0.1, s*0.8, s*0.5);
+    // Wheat stalks
+    for (let w = 0; w < 8; w++) {
+      let wx = cx - s*0.3 + w * s*0.09;
+      let sway = Math.sin(w*1.3)*2;
+      ctx.strokeStyle = '#8B6914';
+      ctx.lineWidth = 1.2;
+      ctx.beginPath();
+      ctx.moveTo(wx, cy+s*0.3);
+      ctx.lineTo(wx+sway, cy-s*0.15);
+      ctx.stroke();
+      // Wheat head
+      ctx.fillStyle = '#d4a017';
+      ctx.beginPath();
+      ctx.ellipse(wx+sway, cy-s*0.18, 2.5, 6, sway*0.05, 0, Math.PI*2);
+      ctx.fill();
+    }
+  } else if (tile.type === 'ore') {
+    // Mountain peaks
+    ctx.fillStyle = '#556677';
+    ctx.beginPath();
+    ctx.moveTo(cx-s*0.4, cy+s*0.3);
+    ctx.lineTo(cx-s*0.1, cy-s*0.32);
+    ctx.lineTo(cx+s*0.05, cy+s*0.05);
+    ctx.lineTo(cx+s*0.3, cy-s*0.22);
+    ctx.lineTo(cx+s*0.45, cy+s*0.3);
+    ctx.closePath();
+    ctx.fill();
+    // Snow caps
+    ctx.fillStyle = '#dde5ee';
+    ctx.beginPath();
+    ctx.moveTo(cx-s*0.1, cy-s*0.32);
+    ctx.lineTo(cx-s*0.04, cy-s*0.16);
+    ctx.lineTo(cx-s*0.18, cy-s*0.16);
+    ctx.closePath();
+    ctx.fill();
+    ctx.beginPath();
+    ctx.moveTo(cx+s*0.3, cy-s*0.22);
+    ctx.lineTo(cx+s*0.35, cy-s*0.1);
+    ctx.lineTo(cx+s*0.22, cy-s*0.1);
+    ctx.closePath();
+    ctx.fill();
+  } else if (tile.type === 'desert') {
+    // Sand dunes
+    ctx.fillStyle = '#c4a67a';
+    ctx.beginPath();
+    ctx.moveTo(cx-s*0.5, cy+s*0.2);
+    ctx.quadraticCurveTo(cx-s*0.15, cy-s*0.1, cx+s*0.1, cy+s*0.12);
+    ctx.quadraticCurveTo(cx+s*0.35, cy-s*0.02, cx+s*0.5, cy+s*0.2);
+    ctx.fill();
+    // Cactus
+    ctx.fillStyle = '#5a8a3a';
+    ctx.fillRect(cx-2, cy-s*0.1, 4, s*0.25);
+    ctx.fillRect(cx-8, cy-s*0.02, 6, 3);
+    ctx.fillRect(cx-8, cy-s*0.02, 3, -8);
+    ctx.fillRect(cx+4, cy-s*0.06, 6, 3);
+    ctx.fillRect(cx+7, cy-s*0.06, 3, -6);
+  }
+  
+  ctx.restore();
+  
+  // Hex border
+  ctx.strokeStyle = 'rgba(0,0,0,0.35)';
+  ctx.lineWidth = 2.5;
+  drawHexPath(cx, cy, s);
+  ctx.stroke();
+  // Inner light border
+  ctx.strokeStyle = 'rgba(255,255,255,0.15)';
+  ctx.lineWidth = 1;
+  drawHexPath(cx, cy, s * 0.96);
   ctx.stroke();
   
-  let emojis = {wood:'🌲',brick:'🧱',sheep:'🐑',wheat:'🌾',ore:'⛏️',desert:'🏜️'};
-  ctx.font = `${Math.max(14, s * 0.35)}px sans-serif`;
-  ctx.textAlign = 'center';
-  ctx.textBaseline = 'middle';
-  ctx.fillText(emojis[tile.type], cx, cy - s * 0.15);
-  
+  // Number token
   if (tile.number && ti !== G.robberTile) {
-    let r = s * 0.28;
-    ctx.fillStyle = '#fdf6e3';
+    let r = s * 0.3;
+    // Shadow
+    ctx.fillStyle = 'rgba(0,0,0,0.25)';
     ctx.beginPath();
-    ctx.arc(cx, cy + s * 0.2, r, 0, Math.PI * 2);
+    ctx.arc(cx+1, cy+2, r, 0, Math.PI * 2);
     ctx.fill();
-    ctx.strokeStyle = tile.number === 6 || tile.number === 8 ? '#c0392b' : '#555';
-    ctx.lineWidth = tile.number === 6 || tile.number === 8 ? 2 : 1;
+    // Token bg
+    let tGrad = ctx.createRadialGradient(cx-r*0.3, cy-r*0.3, 0, cx, cy, r);
+    tGrad.addColorStop(0, '#fefaf0');
+    tGrad.addColorStop(1, '#e8dcc0');
+    ctx.fillStyle = tGrad;
+    ctx.beginPath();
+    ctx.arc(cx, cy, r, 0, Math.PI * 2);
+    ctx.fill();
+    // Token border
+    let isHot = tile.number === 6 || tile.number === 8;
+    ctx.strokeStyle = isHot ? '#c0392b' : '#8b7355';
+    ctx.lineWidth = isHot ? 2.5 : 1.5;
     ctx.stroke();
-    
-    ctx.fillStyle = tile.number === 6 || tile.number === 8 ? '#c0392b' : '#333';
-    ctx.font = `bold ${Math.max(11, s * 0.25)}px sans-serif`;
-    ctx.fillText(tile.number, cx, cy + s * 0.2);
-    
+    // Number
+    ctx.fillStyle = isHot ? '#c0392b' : '#333';
+    ctx.font = `bold ${Math.max(14, s * 0.3)}px serif`;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(tile.number, cx, cy - 1);
+    // Probability dots
     let dots = [0,0,1,2,3,4,5,0,5,4,3,2,1];
     let nd = dots[tile.number] || 0;
-    let dotY = cy + s * 0.2 + r * 0.55;
+    let dotY = cy + r * 0.55;
     for (let d = 0; d < nd; d++) {
-      ctx.fillStyle = tile.number === 6 || tile.number === 8 ? '#c0392b' : '#555';
+      ctx.fillStyle = isHot ? '#c0392b' : '#8b7355';
       ctx.beginPath();
-      ctx.arc(cx - (nd - 1) * 3 + d * 6, dotY, 1.5, 0, Math.PI * 2);
+      ctx.arc(cx - (nd - 1) * 2.5 + d * 5, dotY, 2, 0, Math.PI * 2);
       ctx.fill();
     }
   }
@@ -1563,38 +1744,55 @@ function drawHexPath(cx, cy, size) {
 }
 
 function drawSettlement(x, y, color) {
+  let sc = 1.3;
+  ctx.fillStyle = 'rgba(0,0,0,0.3)';
+  ctx.beginPath();
+  ctx.moveTo(x+1, y - 10*sc+2);
+  ctx.lineTo(x + 8*sc+1, y - 2*sc+2);
+  ctx.lineTo(x + 8*sc+1, y + 8*sc+2);
+  ctx.lineTo(x - 8*sc+1, y + 8*sc+2);
+  ctx.lineTo(x - 8*sc+1, y - 2*sc+2);
+  ctx.closePath();
+  ctx.fill();
   ctx.fillStyle = color;
   ctx.strokeStyle = '#fff';
   ctx.lineWidth = 2;
   ctx.beginPath();
-  ctx.moveTo(x, y - 10);
-  ctx.lineTo(x + 8, y - 2);
-  ctx.lineTo(x + 8, y + 8);
-  ctx.lineTo(x - 8, y + 8);
-  ctx.lineTo(x - 8, y - 2);
+  ctx.moveTo(x, y - 10*sc);
+  ctx.lineTo(x + 8*sc, y - 2*sc);
+  ctx.lineTo(x + 8*sc, y + 8*sc);
+  ctx.lineTo(x - 8*sc, y + 8*sc);
+  ctx.lineTo(x - 8*sc, y - 2*sc);
   ctx.closePath();
   ctx.fill();
   ctx.stroke();
 }
 
 function drawCity(x, y, color) {
+  let sc = 1.3;
+  // Shadow
+  ctx.fillStyle = 'rgba(0,0,0,0.3)';
+  ctx.beginPath();
+  ctx.moveTo(x-4*sc+1, y-12*sc+2); ctx.lineTo(x+6*sc+1, y-6*sc+2); ctx.lineTo(x+10*sc+1, y-6*sc+2);
+  ctx.lineTo(x+10*sc+1, y+8*sc+2); ctx.lineTo(x-10*sc+1, y+8*sc+2); ctx.lineTo(x-10*sc+1, y-6*sc+2);
+  ctx.closePath(); ctx.fill();
   ctx.fillStyle = color;
   ctx.strokeStyle = '#fff';
   ctx.lineWidth = 2;
   ctx.beginPath();
-  ctx.moveTo(x - 4, y - 12);
-  ctx.lineTo(x + 6, y - 6);
-  ctx.lineTo(x + 10, y - 6);
-  ctx.lineTo(x + 10, y + 8);
-  ctx.lineTo(x - 10, y + 8);
-  ctx.lineTo(x - 10, y - 6);
+  ctx.moveTo(x - 4*sc, y - 12*sc);
+  ctx.lineTo(x + 6*sc, y - 6*sc);
+  ctx.lineTo(x + 10*sc, y - 6*sc);
+  ctx.lineTo(x + 10*sc, y + 8*sc);
+  ctx.lineTo(x - 10*sc, y + 8*sc);
+  ctx.lineTo(x - 10*sc, y - 6*sc);
   ctx.closePath();
   ctx.fill();
   ctx.stroke();
   ctx.beginPath();
-  ctx.moveTo(x - 6, y - 6);
-  ctx.lineTo(x - 4, y - 12);
-  ctx.lineTo(x - 2, y - 6);
+  ctx.moveTo(x - 6*sc, y - 6*sc);
+  ctx.lineTo(x - 4*sc, y - 12*sc);
+  ctx.lineTo(x - 2*sc, y - 6*sc);
   ctx.closePath();
   ctx.fill();
   ctx.stroke();
@@ -1630,7 +1828,7 @@ function updateUI() {
     if (p.largestArmy) extras.push('⚔️最大军');
     if (p.devCards.length) extras.push(`🃏${p.devCards.length}张`);
     if (p.playedKnights) extras.push(`🗡️${p.playedKnights}骑士`);
-    return `<div class="player-card ${isActive ? 'active' : ''}">
+    return `<div class="player-card ${isActive ? 'active' : ''}" style="border-left-color:${p.color}">
       <div class="player-header">
         <span class="player-dot" style="background:${p.color}"></span>
         <span class="player-name">${p.name}${aiLabel}</span>
