@@ -95,6 +95,16 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(
 #winner-screen.show{display:flex}
 #winner-screen h1{font-size:2.5rem;margin-bottom:10px}
 #winner-screen p{font-size:1.2rem;opacity:0.8;margin-bottom:20px}
+
+/* Setup screen */
+#setup-screen{padding:20px}
+#setup-screen h3{margin-bottom:12px}
+.setup-player-row{display:flex;align-items:center;gap:10px;margin:8px 0;padding:8px 12px;border-radius:8px;background:rgba(255,255,255,0.04)}
+.setup-player-row .player-dot{width:18px;height:18px;border-radius:50%;flex-shrink:0}
+.setup-player-row select,.setup-player-row input{padding:4px 8px;border:1px solid var(--border);border-radius:4px;background:rgba(255,255,255,0.1);color:var(--text);font-size:0.85rem}
+.setup-player-row input{width:100px}
+.setup-player-row select{width:80px}
+.setup-error{color:#e74c3c;font-size:0.82rem;margin-top:6px;display:none}
 </style>
 </head>
 <body>
@@ -139,13 +149,18 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(
 
 <!-- Setup modal -->
 <div class="modal-overlay" id="modal-setup">
-  <div class="modal">
+  <div class="modal" style="min-width:400px">
     <h2>🏝️ 卡坦岛 - 新游戏</h2>
-    <p style="margin-bottom:12px;font-size:0.9rem">选择玩家数量：</p>
-    <div class="btn-row">
-      <button class="btn" onclick="startGame(2)">2 人</button>
-      <button class="btn" onclick="startGame(3)">3 人</button>
-      <button class="btn primary" onclick="startGame(4)">4 人</button>
+    <p style="margin-bottom:12px;font-size:0.9rem">选择玩家数量和类型：</p>
+    <div class="btn-row" style="margin-bottom:12px">
+      <button class="btn" onclick="setPlayerCount(2)" id="pc-2">2 人</button>
+      <button class="btn" onclick="setPlayerCount(3)" id="pc-3">3 人</button>
+      <button class="btn primary" onclick="setPlayerCount(4)" id="pc-4">4 人</button>
+    </div>
+    <div id="setup-screen"></div>
+    <div class="setup-error" id="setup-error">至少需要一名人类玩家！</div>
+    <div class="modal-btns">
+      <button class="btn primary" id="btn-start-game" onclick="validateAndStart()">🎮 开始游戏</button>
     </div>
   </div>
 </div>
@@ -181,7 +196,7 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(
 
 <script>
 // ============================================================
-// CATAN GAME ENGINE
+// CATAN GAME ENGINE WITH AI
 // ============================================================
 
 const RES = ['wood','brick','sheep','wheat','ore'];
@@ -189,10 +204,10 @@ const RES_CN = {wood:'🌲木材',brick:'🧱砖头',sheep:'🐑羊毛',wheat:'�
 const RES_COLOR = {wood:'#2d8a4e',brick:'#c0392b',sheep:'#7dce82',wheat:'#f1c40f',ore:'#7f8c8d',desert:'#f4e4c1'};
 const PLAYER_COLORS = ['#e74c3c','#3498db','#f39c12','#2ecc71'];
 const PLAYER_NAMES = ['红方','蓝方','橙方','绿方'];
+const AI_NAMES = ['AI 小明','AI 小红','AI 小刚','AI 小芳'];
 
 // Hex tile types and counts
 const TILE_DIST = {wood:4,brick:3,ore:3,wheat:4,sheep:4,desert:1};
-// Number tokens (standard)
 const NUMBER_TOKENS = [2,3,3,4,4,5,5,6,6,8,8,9,9,10,10,11,11,12];
 
 // Dev card deck
@@ -206,23 +221,17 @@ const COSTS = {
   devcard:{sheep:1,wheat:1,ore:1}
 };
 
-// Hex geometry for board layout - axial coordinates
-// Standard Catan: rows of 3,4,5,4,3
+// Probability weight for each number
+const NUM_PROB = {2:1,3:2,4:3,5:4,6:5,8:5,9:4,10:3,11:2,12:1};
+
 const HEX_COORDS = [
-  // row 0 (3 hexes)
   {q:0,r:0},{q:1,r:0},{q:2,r:0},
-  // row 1 (4 hexes)
   {q:-1,r:1},{q:0,r:1},{q:1,r:1},{q:2,r:1},
-  // row 2 (5 hexes)
   {q:-2,r:2},{q:-1,r:2},{q:0,r:2},{q:1,r:2},{q:2,r:2},
-  // row 3 (4 hexes)
   {q:-2,r:3},{q:-1,r:3},{q:0,r:3},{q:1,r:3},
-  // row 4 (3 hexes)
   {q:-2,r:4},{q:-1,r:4},{q:0,r:4}
 ];
 
-// Port positions (edge of board) - [vertexIndex1, vertexIndex2, type]
-// We'll place ports on specific edges
 const PORT_DEFS = [
   {type:'3:1'},{type:'wheat'},{type:'ore'},{type:'3:1'},
   {type:'sheep'},{type:'3:1'},{type:'3:1'},{type:'brick'},{type:'wood'}
@@ -231,17 +240,92 @@ const PORT_DEFS = [
 // Game state
 let G = {};
 
-function initGame(numPlayers) {
+// AI action queue and delay
+let aiActionQueue = [];
+let aiRunning = false;
+const AI_DELAY = 400;
+
+// ============================================================
+// PLAYER SETUP SCREEN
+// ============================================================
+
+let setupPlayerCount = 4;
+
+function setPlayerCount(n) {
+  setupPlayerCount = n;
+  [2,3,4].forEach(i => {
+    document.getElementById('pc-'+i).classList.toggle('primary', i===n);
+  });
+  renderSetupScreen();
+}
+
+function renderSetupScreen() {
+  let html = '';
+  for (let i = 0; i < setupPlayerCount; i++) {
+    html += `<div class="setup-player-row">
+      <span class="player-dot" style="background:${PLAYER_COLORS[i]}"></span>
+      <span style="font-size:0.85rem;width:50px">玩家${i+1}</span>
+      <select id="ptype-${i}" onchange="onTypeChange(${i})">
+        <option value="human" ${i===0?'selected':''}>人类</option>
+        <option value="ai" ${i>0?'selected':''}>电脑</option>
+      </select>
+      <input type="text" id="pname-${i}" placeholder="名字" value="${i===0 ? '' : AI_NAMES[i]}" ${i>0?'readonly':''}>
+    </div>`;
+  }
+  document.getElementById('setup-screen').innerHTML = html;
+  document.getElementById('setup-error').style.display = 'none';
+}
+
+window.onTypeChange = function(idx) {
+  let sel = document.getElementById('ptype-'+idx);
+  let inp = document.getElementById('pname-'+idx);
+  if (sel.value === 'ai') {
+    inp.value = AI_NAMES[idx];
+    inp.readOnly = true;
+  } else {
+    inp.value = '';
+    inp.readOnly = false;
+    inp.placeholder = '输入名字';
+  }
+};
+
+function validateAndStart() {
+  let hasHuman = false;
+  let players = [];
+  for (let i = 0; i < setupPlayerCount; i++) {
+    let type = document.getElementById('ptype-'+i).value;
+    let name = document.getElementById('pname-'+i).value.trim();
+    if (type === 'human') {
+      hasHuman = true;
+      if (!name) name = PLAYER_NAMES[i];
+    } else {
+      if (!name) name = AI_NAMES[i];
+    }
+    players.push({type, name});
+  }
+  if (!hasHuman) {
+    document.getElementById('setup-error').style.display = 'block';
+    return;
+  }
+  closeModal('modal-setup');
+  startGameWithPlayers(players);
+}
+
+// ============================================================
+// INIT
+// ============================================================
+
+function initGame(numPlayers, playerDefs) {
   G = {
     numPlayers,
-    phase: 'setup', // setup, setupReverse, play, gameover
-    setupRound: 1, // 1 = forward, 2 = reverse
-    setupStep: 'settlement', // settlement or road
+    phase: 'setup',
+    setupRound: 1,
+    setupStep: 'settlement',
     currentPlayer: 0,
-    turnPhase: 'roll', // roll, postRoll, build, robber, discard
+    turnPhase: 'roll',
     tiles: [],
-    vertices: [], // intersection points
-    edges: [], // road positions
+    vertices: [],
+    edges: [],
     players: [],
     robberTile: -1,
     devDeck: [],
@@ -258,7 +342,7 @@ function initGame(numPlayers) {
   
   buildBoard();
   buildVerticesAndEdges();
-  initPlayers(numPlayers);
+  initPlayers(numPlayers, playerDefs);
   initDevDeck();
   
   G.phase = 'setup';
@@ -268,12 +352,10 @@ function initGame(numPlayers) {
 }
 
 function buildBoard() {
-  // Shuffle tiles
   let types = [];
   for (let t in TILE_DIST) for (let i = 0; i < TILE_DIST[t]; i++) types.push(t);
   shuffle(types);
   
-  // Shuffle numbers
   let nums = [...NUMBER_TOKENS];
   shuffle(nums);
   
@@ -291,19 +373,15 @@ function buildBoard() {
 }
 
 function buildVerticesAndEdges() {
-  // Compute pixel positions for each hex center
   const size = 50;
   G.hexSize = size;
   const sqrt3 = Math.sqrt(3);
   
   G.tiles.forEach(t => {
-    // offset coords: shift odd rows
-    // Using axial to pixel
     t.px = size * sqrt3 * (t.q + t.r / 2);
     t.py = size * 1.5 * t.r;
   });
   
-  // Center the board
   let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
   G.tiles.forEach(t => {
     minX = Math.min(minX, t.px - size);
@@ -314,9 +392,7 @@ function buildVerticesAndEdges() {
   let cx = (minX + maxX) / 2, cy = (minY + maxY) / 2;
   G.tiles.forEach(t => { t.px -= cx; t.py -= cy; });
   
-  // Compute vertices (hex corners)
-  // Each hex has 6 corners. Merge vertices that are close together.
-  let vMap = new Map(); // key -> vertex index
+  let vMap = new Map();
   let vertices = [];
   
   function vKey(x, y) {
@@ -346,7 +422,6 @@ function buildVerticesAndEdges() {
   
   G.vertices = vertices;
   
-  // Compute edges (pairs of adjacent vertices on hexes)
   let eMap = new Map();
   let edges = [];
   
@@ -365,7 +440,6 @@ function buildVerticesAndEdges() {
   
   G.edges = edges;
   
-  // Build adjacency
   vertices.forEach(v => {
     v.adjacentVertices = [];
     v.adjacentEdges = [];
@@ -378,34 +452,19 @@ function buildVerticesAndEdges() {
     v2.adjacentEdges.push(ei);
   });
   
-  // Assign ports to border vertices
   assignPorts();
 }
 
 function assignPorts() {
-  // Find border vertices (vertices touching fewer than 3 tiles)
-  let borderVertices = G.vertices.filter(v => v.tiles.length < 3);
-  
-  // Find border edges (edges where both vertices are border vertices)
   let borderEdges = [];
   G.edges.forEach(e => {
     let v1 = G.vertices[e.v1], v2 = G.vertices[e.v2];
-    if (v1.tiles.length < 3 && v2.tiles.length < 3) {
-      // Check that these two vertices share a tile
+    if (v1.tiles.length <= 2 && v2.tiles.length <= 2) {
       let shared = v1.tiles.some(t => v2.tiles.includes(t));
-      if (shared) {
-        // Check that edge is on the outer rim
-        let outerV1 = v1.tiles.length <= 2;
-        let outerV2 = v2.tiles.length <= 2;
-        if (outerV1 && outerV2) {
-          borderEdges.push(e);
-        }
-      }
+      if (shared) borderEdges.push(e);
     }
   });
   
-  // Distribute ports around the border
-  // Pick every ~3rd border edge for ports
   shuffle(borderEdges);
   let portTypes = PORT_DEFS.map(p => p.type);
   shuffle(portTypes);
@@ -422,20 +481,20 @@ function assignPorts() {
     G.vertices[e.v2].port = type;
     usedVertices.add(e.v1);
     usedVertices.add(e.v2);
-    // Mark adjacent vertices as used to space ports
     G.vertices[e.v1].adjacentVertices.forEach(v => usedVertices.add(v));
     G.vertices[e.v2].adjacentVertices.forEach(v => usedVertices.add(v));
     portCount++;
   }
 }
 
-function initPlayers(n) {
+function initPlayers(n, playerDefs) {
   G.players = [];
   for (let i = 0; i < n; i++) {
     G.players.push({
       index: i,
-      name: PLAYER_NAMES[i],
+      name: playerDefs[i].name,
       color: PLAYER_COLORS[i],
+      isAI: playerDefs[i].type === 'ai',
       resources: {wood:0,brick:0,sheep:0,wheat:0,ore:0},
       devCards: [],
       playedKnights: 0,
@@ -491,13 +550,11 @@ function getValidSettlementSpots(playerIdx, isSetup) {
   let spots = [];
   G.vertices.forEach((v, vi) => {
     if (v.building) return;
-    // Distance rule: no adjacent settlements
     let tooClose = v.adjacentVertices.some(avi => G.vertices[avi].building);
     if (tooClose) return;
     if (isSetup) {
       spots.push(vi);
     } else {
-      // Must be adjacent to own road
       let hasRoad = v.adjacentEdges.some(ei => G.edges[ei].road === playerIdx);
       if (hasRoad) spots.push(vi);
     }
@@ -510,20 +567,16 @@ function getValidRoadSpots(playerIdx, isSetup, fromVertex) {
   G.edges.forEach((e, ei) => {
     if (e.road !== -1) return;
     if (isSetup && fromVertex !== undefined) {
-      // Must connect to the just-placed settlement
       if (e.v1 === fromVertex || e.v2 === fromVertex) spots.push(ei);
       return;
     }
-    // Must connect to own road or own building
-    let v1 = G.vertices[e.v1], v2 = G.vertices[e.v2];
     let connected = false;
-    // Check if endpoint has player's building
+    let v1 = G.vertices[e.v1], v2 = G.vertices[e.v2];
     if ((v1.owner === playerIdx) || (v2.owner === playerIdx)) connected = true;
-    // Check if endpoint connects to player's road (and not blocked by opponent building)
     if (!connected) {
       [e.v1, e.v2].forEach(vi => {
         let v = G.vertices[vi];
-        if (v.owner !== -1 && v.owner !== playerIdx) return; // blocked
+        if (v.owner !== -1 && v.owner !== playerIdx) return;
         v.adjacentEdges.forEach(aei => {
           if (G.edges[aei].road === playerIdx) connected = true;
         });
@@ -555,9 +608,6 @@ function placeRoad(playerIdx, ei) {
 function placeCity(playerIdx, vi) {
   G.vertices[vi].building = 'city';
   G.players[playerIdx].victoryPoints++;
-  // Move from settlements to cities tracking
-  let idx = G.players[playerIdx].settlements.indexOf(vi);
-  // Keep in settlements array for resource collection but mark as city
   G.players[playerIdx].cities.push(vi);
   log(`${G.players[playerIdx].name} 升级了城市`);
 }
@@ -581,7 +631,6 @@ function distributeResources(total) {
 }
 
 function setupGiveResources(playerIdx, vi) {
-  // In setup round 2, give resources for the second settlement
   G.vertices[vi].tiles.forEach(ti => {
     let t = G.tiles[ti];
     if (t.type !== 'desert') {
@@ -590,7 +639,6 @@ function setupGiveResources(playerIdx, vi) {
   });
 }
 
-// Longest road calculation (DFS)
 function calcLongestRoad(playerIdx) {
   let playerEdges = G.edges.filter(e => e.road === playerIdx);
   if (playerEdges.length === 0) return 0;
@@ -599,25 +647,19 @@ function calcLongestRoad(playerIdx) {
   
   function dfs(vertex, visited) {
     let v = G.vertices[vertex];
-    let extended = false;
     v.adjacentEdges.forEach(ei => {
       if (G.edges[ei].road !== playerIdx) return;
       if (visited.has(ei)) return;
       let other = G.edges[ei].v1 === vertex ? G.edges[ei].v2 : G.edges[ei].v1;
-      // Check if blocked by opponent's building
       let otherV = G.vertices[other];
       if (otherV.owner !== -1 && otherV.owner !== playerIdx) return;
       visited.add(ei);
-      extended = true;
       dfs(other, visited);
       visited.delete(ei);
     });
-    if (!extended || visited.size > best) {
-      best = Math.max(best, visited.size);
-    }
+    best = Math.max(best, visited.size);
   }
   
-  // Try starting from each vertex that has the player's road
   let startVertices = new Set();
   playerEdges.forEach(e => { startVertices.add(e.v1); startVertices.add(e.v2); });
   
@@ -703,6 +745,598 @@ function getTradeRate(playerIdx, resource) {
 }
 
 // ============================================================
+// AI LOGIC
+// ============================================================
+
+function isCurrentPlayerAI() {
+  return G.players[G.currentPlayer] && G.players[G.currentPlayer].isAI;
+}
+
+// Score a vertex for settlement placement
+function aiScoreVertex(vi) {
+  let v = G.vertices[vi];
+  let score = 0;
+  let resTypes = new Set();
+  v.tiles.forEach(ti => {
+    let t = G.tiles[ti];
+    if (t.type === 'desert') return;
+    let prob = NUM_PROB[t.number] || 0;
+    score += prob;
+    resTypes.add(t.type);
+  });
+  // Diversity bonus
+  score += resTypes.size * 1.5;
+  // Port bonus
+  if (v.port) score += 2;
+  return score;
+}
+
+// AI: pick best settlement spot
+function aiPickSettlement(playerIdx, isSetup) {
+  let spots = getValidSettlementSpots(playerIdx, isSetup);
+  if (spots.length === 0) return -1;
+  
+  // Score each spot
+  let scored = spots.map(vi => ({vi, score: aiScoreVertex(vi)}));
+  // Add some randomness
+  scored.forEach(s => s.score += Math.random() * 1.5);
+  scored.sort((a, b) => b.score - a.score);
+  return scored[0].vi;
+}
+
+// AI: pick best road from settlement
+function aiPickRoadFromSettlement(playerIdx, fromVertex) {
+  let spots = getValidRoadSpots(playerIdx, true, fromVertex);
+  if (spots.length === 0) return -1;
+  
+  // Prefer roads that lead toward good unoccupied vertices
+  let scored = spots.map(ei => {
+    let e = G.edges[ei];
+    let otherV = e.v1 === fromVertex ? e.v2 : e.v1;
+    // Score based on what's reachable from the other end
+    let score = 0;
+    let ov = G.vertices[otherV];
+    ov.adjacentVertices.forEach(avi => {
+      let av = G.vertices[avi];
+      if (!av.building) score += aiScoreVertex(avi) * 0.3;
+    });
+    score += Math.random() * 2;
+    return {ei, score};
+  });
+  scored.sort((a, b) => b.score - a.score);
+  return scored[0].ei;
+}
+
+// AI: pick road for expansion during play
+function aiPickRoad(playerIdx) {
+  let spots = getValidRoadSpots(playerIdx, false);
+  if (spots.length === 0) return -1;
+  
+  let scored = spots.map(ei => {
+    let e = G.edges[ei];
+    let score = 0;
+    // Prefer roads that lead toward good empty settlement spots
+    [e.v1, e.v2].forEach(vi => {
+      let v = G.vertices[vi];
+      if (!v.building && !v.adjacentVertices.some(avi => G.vertices[avi].building)) {
+        score += aiScoreVertex(vi) * 0.5;
+      }
+    });
+    score += Math.random() * 2;
+    return {ei, score};
+  });
+  scored.sort((a, b) => b.score - a.score);
+  return scored[0].ei;
+}
+
+// AI: choose robber placement - hurt the leading player
+function aiPickRobberTile(playerIdx) {
+  // Find leading player (not self)
+  let leader = -1, leaderVP = -1;
+  G.players.forEach((p, i) => {
+    if (i === playerIdx) return;
+    if (p.victoryPoints > leaderVP) { leaderVP = p.victoryPoints; leader = i; }
+  });
+  if (leader === -1) leader = (playerIdx + 1) % G.numPlayers;
+  
+  // Find tile that hurts leader most
+  let bestTile = -1, bestScore = -1;
+  G.tiles.forEach((t, ti) => {
+    if (ti === G.robberTile || t.type === 'desert') return;
+    let score = 0;
+    t.vertices.forEach(vi => {
+      let v = G.vertices[vi];
+      if (v.owner === leader) {
+        score += (NUM_PROB[t.number] || 0) * (v.building === 'city' ? 2 : 1);
+      }
+      // Avoid hurting self
+      if (v.owner === playerIdx) {
+        score -= (NUM_PROB[t.number] || 0) * (v.building === 'city' ? 3 : 1.5);
+      }
+    });
+    if (score > bestScore) { bestScore = score; bestTile = ti; }
+  });
+  
+  // Fallback: any tile not robber, not adjacent to self
+  if (bestTile === -1) {
+    for (let ti = 0; ti < G.tiles.length; ti++) {
+      if (ti !== G.robberTile && G.tiles[ti].type !== 'desert') { bestTile = ti; break; }
+    }
+  }
+  return bestTile;
+}
+
+// AI: choose steal target
+function aiPickStealTarget(playerIdx, targets) {
+  // Steal from leader
+  let best = targets[0], bestVP = G.players[targets[0]].victoryPoints;
+  targets.forEach(ti => {
+    if (G.players[ti].victoryPoints > bestVP) {
+      bestVP = G.players[ti].victoryPoints;
+      best = ti;
+    }
+  });
+  return best;
+}
+
+// AI: discard resources (discard lowest-value ones)
+function aiDiscard(playerIdx) {
+  let p = G.players[playerIdx];
+  let total = totalResources(p);
+  let discardCount = Math.floor(total / 2);
+  
+  // Value ranking: ore > wheat > sheep > brick > wood (for building priorities)
+  // Discard the least useful - those we have most of
+  let toDiscard = {wood:0,brick:0,sheep:0,wheat:0,ore:0};
+  let remaining = discardCount;
+  
+  // Sort resources by how many we have (descending), discard from most plentiful
+  while (remaining > 0) {
+    let sorted = RES.filter(r => p.resources[r] - toDiscard[r] > 0)
+                    .sort((a, b) => (p.resources[b] - toDiscard[b]) - (p.resources[a] - toDiscard[a]));
+    if (sorted.length === 0) break;
+    toDiscard[sorted[0]]++;
+    remaining--;
+  }
+  
+  RES.forEach(r => p.resources[r] -= toDiscard[r]);
+  let discardStr = RES.filter(r => toDiscard[r] > 0).map(r => `${toDiscard[r]}${RES_CN[r]}`).join(', ');
+  log(`${p.name} 丢弃了 ${discardCount} 张资源 (${discardStr})`);
+}
+
+// AI: perform bank trades
+function aiDoTrades(playerIdx) {
+  let p = G.players[playerIdx];
+  let actions = [];
+  
+  // Determine what we need most
+  // Priority: settlement > city > devcard
+  let needs = [];
+  if (canAlmostAfford(p, COSTS.settlement, 1)) {
+    needs.push({cost: COSTS.settlement, label: '村庄'});
+  }
+  if (canAlmostAfford(p, COSTS.city, 1)) {
+    needs.push({cost: COSTS.city, label: '城市'});
+  }
+  if (canAlmostAfford(p, COSTS.devcard, 1)) {
+    needs.push({cost: COSTS.devcard, label: '发展卡'});
+  }
+  
+  for (let need of needs) {
+    // Find what resource we're missing
+    for (let r of RES) {
+      let deficit = (need.cost[r] || 0) - p.resources[r];
+      if (deficit <= 0) continue;
+      
+      // Find a resource we have excess of to trade
+      for (let give of RES) {
+        if (give === r) continue;
+        let rate = getTradeRate(playerIdx, give);
+        let excess = p.resources[give] - (need.cost[give] || 0);
+        if (excess >= rate) {
+          // Do the trade
+          p.resources[give] -= rate;
+          p.resources[r] += 1;
+          log(`🏦 ${p.name} 用 ${rate} 个${RES_CN[give]} 换了 1 个${RES_CN[r]}`);
+          actions.push(true);
+          deficit--;
+          if (deficit <= 0) break;
+        }
+      }
+    }
+  }
+  return actions.length > 0;
+}
+
+// Check if player can almost afford something (missing at most N resources)
+function canAlmostAfford(player, cost, maxMissing) {
+  let missing = 0;
+  for (let r in cost) {
+    let deficit = (cost[r] || 0) - (player.resources[r] || 0);
+    if (deficit > 0) missing += deficit;
+  }
+  return missing <= maxMissing;
+}
+
+// AI: play development cards
+function aiPlayDevCards(playerIdx) {
+  let p = G.players[playerIdx];
+  if (G.playedDevThisTurn) return false;
+  
+  // Play knight if we have one
+  let knightIdx = p.devCards.indexOf('knight');
+  if (knightIdx !== -1) {
+    // Check if robber is on one of our tiles
+    let robberHurtsUs = false;
+    if (G.robberTile >= 0) {
+      G.tiles[G.robberTile].vertices.forEach(vi => {
+        if (G.vertices[vi].owner === playerIdx) robberHurtsUs = true;
+      });
+    }
+    // Play knight if robber hurts us or to build toward largest army
+    if (robberHurtsUs || p.playedKnights >= 2) {
+      p.devCards.splice(knightIdx, 1);
+      p.playedKnights++;
+      G.playedDevThisTurn = true;
+      updateLargestArmy();
+      log(`⚔️ ${p.name} 打出了骑士卡`);
+      
+      // Move robber
+      let tile = aiPickRobberTile(playerIdx);
+      if (tile >= 0) {
+        G.robberTile = tile;
+        log(`🥷 ${p.name} 移动了强盗`);
+        
+        // Steal
+        let stealTargets = new Set();
+        G.tiles[tile].vertices.forEach(vi => {
+          let v = G.vertices[vi];
+          if (v.owner !== -1 && v.owner !== playerIdx && totalResources(G.players[v.owner]) > 0) {
+            stealTargets.add(v.owner);
+          }
+        });
+        if (stealTargets.size > 0) {
+          let target = aiPickStealTarget(playerIdx, [...stealTargets]);
+          let tp = G.players[target];
+          let available = RES.filter(r => tp.resources[r] > 0);
+          if (available.length > 0) {
+            let stolen = available[Math.floor(Math.random() * available.length)];
+            tp.resources[stolen]--;
+            p.resources[stolen]++;
+            log(`🥷 ${p.name} 从 ${tp.name} 偷取了资源`);
+          }
+        }
+      }
+      return true;
+    }
+  }
+  
+  // Play road building if we have it and can use it
+  let rbIdx = p.devCards.indexOf('roadBuilding');
+  if (rbIdx !== -1 && getValidRoadSpots(playerIdx, false).length > 0) {
+    p.devCards.splice(rbIdx, 1);
+    G.playedDevThisTurn = true;
+    log(`🛤️ ${p.name} 打出了修路卡`);
+    for (let i = 0; i < 2; i++) {
+      let road = aiPickRoad(playerIdx);
+      if (road >= 0) {
+        placeRoad(playerIdx, road);
+      }
+    }
+    updateLongestRoad();
+    return true;
+  }
+  
+  // Play year of plenty
+  let yopIdx = p.devCards.indexOf('yearOfPlenty');
+  if (yopIdx !== -1) {
+    p.devCards.splice(yopIdx, 1);
+    G.playedDevThisTurn = true;
+    // Pick resources we need most
+    let needed = aiMostNeededResources(playerIdx, 2);
+    needed.forEach(r => p.resources[r]++);
+    log(`🌾 ${p.name} 打出了丰年卡，获得了 ${needed.map(r => RES_CN[r]).join('、')}`);
+    return true;
+  }
+  
+  // Play monopoly if we can get a lot
+  let monIdx = p.devCards.indexOf('monopoly');
+  if (monIdx !== -1) {
+    // Find the resource others have most of
+    let bestRes = null, bestAmount = 3; // only play if we can get 3+
+    RES.forEach(r => {
+      let total = 0;
+      G.players.forEach((pl, i) => {
+        if (i !== playerIdx) total += pl.resources[r];
+      });
+      if (total > bestAmount) { bestAmount = total; bestRes = r; }
+    });
+    if (bestRes) {
+      p.devCards.splice(monIdx, 1);
+      G.playedDevThisTurn = true;
+      let total = 0;
+      G.players.forEach((pl, i) => {
+        if (i === playerIdx) return;
+        total += pl.resources[bestRes];
+        pl.resources[bestRes] = 0;
+      });
+      p.resources[bestRes] += total;
+      log(`💰 ${p.name} 垄断了${RES_CN[bestRes]}，获得 ${total} 张`);
+      return true;
+    }
+  }
+  
+  return false;
+}
+
+function aiMostNeededResources(playerIdx, count) {
+  let p = G.players[playerIdx];
+  let result = [];
+  // What do we need for settlement, city, or road?
+  let targets = [COSTS.settlement, COSTS.city, COSTS.road, COSTS.devcard];
+  let deficits = {};
+  RES.forEach(r => deficits[r] = 0);
+  
+  targets.forEach(cost => {
+    RES.forEach(r => {
+      let d = (cost[r] || 0) - p.resources[r];
+      if (d > 0) deficits[r] += d;
+    });
+  });
+  
+  let sorted = [...RES].sort((a, b) => deficits[b] - deficits[a]);
+  for (let i = 0; i < count; i++) {
+    result.push(sorted[i % sorted.length]);
+  }
+  return result;
+}
+
+// AI: main build phase logic
+function aiBuildPhase(playerIdx) {
+  let p = G.players[playerIdx];
+  let actions = [];
+  
+  // Try to play dev cards first
+  if (aiPlayDevCards(playerIdx)) {
+    actions.push('devcard');
+  }
+  
+  // Try bank trades
+  if (aiDoTrades(playerIdx)) {
+    actions.push('trade');
+  }
+  
+  // Build priority: Settlement > City > DevCard > Road
+  // Try settlement
+  if (canAfford(p, COSTS.settlement)) {
+    let spots = getValidSettlementSpots(playerIdx, false);
+    if (spots.length > 0) {
+      let best = spots.sort((a, b) => aiScoreVertex(b) - aiScoreVertex(a))[0];
+      pay(p, COSTS.settlement);
+      placeSettlement(playerIdx, best);
+      updateLongestRoad();
+      actions.push('settlement');
+    }
+  }
+  
+  // Try city
+  if (canAfford(p, COSTS.city)) {
+    let spots = getValidCitySpots(playerIdx);
+    if (spots.length > 0) {
+      // Upgrade the settlement with highest production
+      let best = spots.sort((a, b) => aiScoreVertex(b) - aiScoreVertex(a))[0];
+      pay(p, COSTS.city);
+      placeCity(playerIdx, best);
+      actions.push('city');
+    }
+  }
+  
+  // Try dev card
+  if (canAfford(p, COSTS.devcard) && G.devDeck.length > 0) {
+    pay(p, COSTS.devcard);
+    let card = G.devDeck.pop();
+    p.devCards.push(card);
+    log(`🃏 ${p.name} 购买了发展卡`);
+    if (card === 'victoryPoint') {
+      p.victoryPoints++;
+    }
+    actions.push('devcard_buy');
+  }
+  
+  // Try road (if we need expansion)
+  if (canAfford(p, COSTS.road) && p.roads.length < 15) {
+    // Only build road if there are no settlement spots, or to expand toward good spots
+    let settlementSpots = getValidSettlementSpots(playerIdx, false);
+    if (settlementSpots.length < 2) {
+      let road = aiPickRoad(playerIdx);
+      if (road >= 0) {
+        pay(p, COSTS.road);
+        placeRoad(playerIdx, road);
+        updateLongestRoad();
+        actions.push('road');
+      }
+    }
+  }
+  
+  // Second round of trades after building
+  if (actions.length > 0 && aiDoTrades(playerIdx)) {
+    // Try to build more after trading
+    if (canAfford(p, COSTS.settlement)) {
+      let spots = getValidSettlementSpots(playerIdx, false);
+      if (spots.length > 0) {
+        let best = spots.sort((a, b) => aiScoreVertex(b) - aiScoreVertex(a))[0];
+        pay(p, COSTS.settlement);
+        placeSettlement(playerIdx, best);
+        updateLongestRoad();
+      }
+    }
+  }
+  
+  return actions;
+}
+
+// ============================================================
+// AI TURN EXECUTION (with delays)
+// ============================================================
+
+function scheduleAI(fn, delay) {
+  return new Promise(resolve => setTimeout(() => { fn(); resolve(); }, delay || AI_DELAY));
+}
+
+async function aiPlaySetupTurn() {
+  if (G.phase !== 'setup') return;
+  let pi = G.currentPlayer;
+  
+  if (G.setupStep === 'settlement') {
+    let vi = aiPickSettlement(pi, true);
+    if (vi < 0) return;
+    await scheduleAI(() => {
+      placeSettlement(pi, vi);
+      setupLastSettlement = vi;
+      G.setupStep = 'road';
+      highlightVertices = [];
+      highlightEdges = [];
+      updateUI();
+    });
+    
+    // Now place road
+    let ei = aiPickRoadFromSettlement(pi, vi);
+    if (ei < 0) return;
+    await scheduleAI(() => {
+      placeRoad(pi, ei);
+      highlightEdges = [];
+      if (G.setupRound === 2) {
+        setupGiveResources(pi, vi);
+      }
+      advanceSetup();
+    });
+  }
+}
+
+async function aiPlayTurn() {
+  if (G.phase !== 'play' || !isCurrentPlayerAI()) return;
+  let pi = G.currentPlayer;
+  let p = G.players[pi];
+  
+  // Roll dice
+  if (G.turnPhase === 'roll') {
+    await scheduleAI(() => {
+      let [d1, d2] = rollDice();
+      let total = d1 + d2;
+      G.diceRoll = total;
+      
+      document.getElementById('die1').textContent = d1;
+      document.getElementById('die2').textContent = d2;
+      let die1 = document.getElementById('die1');
+      let die2 = document.getElementById('die2');
+      die1.classList.remove('rolling');
+      die2.classList.remove('rolling');
+      void die1.offsetWidth;
+      die1.classList.add('rolling');
+      die2.classList.add('rolling');
+      
+      log(`🎲 ${p.name} 掷出了 ${d1} + ${d2} = ${total}`);
+      
+      if (total === 7) {
+        // Handle discards for all players
+        G.players.forEach((pl, i) => {
+          if (totalResources(pl) > 7) {
+            if (pl.isAI) {
+              aiDiscard(i);
+            } else {
+              G.pendingDiscard.push(i);
+            }
+          }
+        });
+        
+        if (G.pendingDiscard.length > 0) {
+          G.turnPhase = 'discard';
+          showDiscardModal(G.pendingDiscard[0]);
+          updateUI();
+        } else {
+          // AI moves robber
+          G.turnPhase = 'robber';
+        }
+      } else {
+        distributeResources(total);
+        G.turnPhase = 'build';
+      }
+      updateUI();
+    });
+    
+    // If we need to wait for human discards
+    if (G.turnPhase === 'discard') return;
+  }
+  
+  // Move robber if needed
+  if (G.turnPhase === 'robber') {
+    await scheduleAI(() => {
+      let tile = aiPickRobberTile(pi);
+      if (tile >= 0) {
+        G.robberTile = tile;
+        log(`🥷 ${p.name} 移动了强盗`);
+        
+        // Steal
+        let stealTargets = new Set();
+        G.tiles[tile].vertices.forEach(vi => {
+          let v = G.vertices[vi];
+          if (v.owner !== -1 && v.owner !== pi && totalResources(G.players[v.owner]) > 0) {
+            stealTargets.add(v.owner);
+          }
+        });
+        if (stealTargets.size > 0) {
+          let target = aiPickStealTarget(pi, [...stealTargets]);
+          let tp = G.players[target];
+          let available = RES.filter(r => tp.resources[r] > 0);
+          if (available.length > 0) {
+            let stolen = available[Math.floor(Math.random() * available.length)];
+            tp.resources[stolen]--;
+            p.resources[stolen]++;
+            log(`🥷 ${p.name} 从 ${tp.name} 偷取了资源`);
+          }
+        }
+      }
+      G.turnPhase = 'build';
+      interactionMode = null;
+      updateUI();
+    });
+  }
+  
+  // Build phase
+  if (G.turnPhase === 'build') {
+    await scheduleAI(() => {
+      aiBuildPhase(pi);
+      updateUI();
+    });
+    
+    // Check victory
+    if (checkVictory()) { updateUI(); return; }
+    
+    // End turn
+    await scheduleAI(() => {
+      endTurn();
+    });
+  }
+}
+
+// Trigger AI after human discard completes (when it's an AI's turn)
+function onDiscardComplete() {
+  if (isCurrentPlayerAI() && G.turnPhase === 'robber') {
+    setTimeout(() => aiPlayTurn(), AI_DELAY);
+  }
+}
+
+// Check and trigger AI for current player
+function triggerAIIfNeeded() {
+  if (G.phase === 'gameover') return;
+  if (G.phase === 'setup' && isCurrentPlayerAI()) {
+    setTimeout(() => aiPlaySetupTurn(), AI_DELAY);
+  } else if (G.phase === 'play' && isCurrentPlayerAI()) {
+    setTimeout(() => aiPlayTurn(), AI_DELAY);
+  }
+}
+
+// ============================================================
 // RENDERING
 // ============================================================
 
@@ -714,7 +1348,7 @@ let highlightVertices = [];
 let highlightEdges = [];
 let hoverVertex = -1;
 let hoverEdge = -1;
-let interactionMode = null; // null, 'placeSettlement', 'placeRoad', 'placeCity', 'moveRobber'
+let interactionMode = null;
 let setupLastSettlement = -1;
 
 function resizeCanvas() {
@@ -727,7 +1361,6 @@ function resizeCanvas() {
   canvas.style.height = canvasH + 'px';
   ctx.setTransform(devicePixelRatio, 0, 0, devicePixelRatio, 0, 0);
   
-  // Compute scale to fit board
   if (!G.tiles || !G.tiles.length) return;
   let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
   G.vertices.forEach(v => {
@@ -756,19 +1389,18 @@ function render() {
   if (!G.tiles) return;
   ctx.clearRect(0, 0, canvasW, canvasH);
   
-  // Draw water background
   ctx.fillStyle = '#1a5276';
   ctx.fillRect(0, 0, canvasW, canvasH);
   
   let size = G.hexSize;
   
-  // Draw hex tiles
   G.tiles.forEach((t, ti) => {
     let center = toScreen(t.px, t.py);
     drawHex(center.x, center.y, size * scale, t, ti);
   });
   
   // Draw ports
+  let drawnPorts = new Set();
   G.vertices.forEach(v => {
     if (!v.port) return;
     let s = toScreen(v.x, v.y);
@@ -776,18 +1408,10 @@ function render() {
     ctx.beginPath();
     ctx.arc(s.x, s.y, 6 * scale / 10, 0, Math.PI * 2);
     ctx.fill();
-  });
-  
-  // Draw port labels on vertices
-  let drawnPorts = new Set();
-  G.vertices.forEach(v => {
-    if (!v.port) return;
-    // Only draw label once per port pair
+    
     let portKey = v.port + '-' + Math.round(v.x) + '-' + Math.round(v.y);
     if (drawnPorts.has(portKey)) return;
     drawnPorts.add(portKey);
-    let s = toScreen(v.x, v.y);
-    // Direction: away from board center
     let dx = v.x, dy = v.y;
     let dist = Math.sqrt(dx*dx+dy*dy) || 1;
     let lx = s.x + (dx/dist) * 18;
@@ -800,7 +1424,7 @@ function render() {
     ctx.fillText(label, lx, ly);
   });
   
-  // Draw edges (roads)
+  // Draw edges
   G.edges.forEach((e, ei) => {
     if (e.road === -1 && !highlightEdges.includes(ei)) return;
     let s1 = toScreen(G.vertices[e.v1].x, G.vertices[e.v1].y);
@@ -826,7 +1450,7 @@ function render() {
     }
   });
   
-  // Draw vertices (settlements/cities)
+  // Draw vertices
   G.vertices.forEach((v, vi) => {
     let s = toScreen(v.x, v.y);
     
@@ -885,7 +1509,6 @@ function drawHex(cx, cy, size, tile, ti) {
   }
   ctx.closePath();
   
-  // Fill
   let colors = {
     wood: '#2d8a4e', brick: '#c0392b', sheep: '#90d890',
     wheat: '#e8c43a', ore: '#8095a0', desert: '#e8dcc0'
@@ -896,14 +1519,12 @@ function drawHex(cx, cy, size, tile, ti) {
   ctx.lineWidth = 2;
   ctx.stroke();
   
-  // Emoji icon
   let emojis = {wood:'🌲',brick:'🧱',sheep:'🐑',wheat:'🌾',ore:'⛏️',desert:'🏜️'};
   ctx.font = `${Math.max(14, s * 0.35)}px sans-serif`;
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
   ctx.fillText(emojis[tile.type], cx, cy - s * 0.15);
   
-  // Number token
   if (tile.number && ti !== G.robberTile) {
     let r = s * 0.28;
     ctx.fillStyle = '#fdf6e3';
@@ -918,7 +1539,6 @@ function drawHex(cx, cy, size, tile, ti) {
     ctx.font = `bold ${Math.max(11, s * 0.25)}px sans-serif`;
     ctx.fillText(tile.number, cx, cy + s * 0.2);
     
-    // Probability dots
     let dots = [0,0,1,2,3,4,5,0,5,4,3,2,1];
     let nd = dots[tile.number] || 0;
     let dotY = cy + s * 0.2 + r * 0.55;
@@ -971,7 +1591,6 @@ function drawCity(x, y, color) {
   ctx.closePath();
   ctx.fill();
   ctx.stroke();
-  // Tower
   ctx.beginPath();
   ctx.moveTo(x - 6, y - 6);
   ctx.lineTo(x - 4, y - 12);
@@ -986,7 +1605,6 @@ function drawCity(x, y, color) {
 // ============================================================
 
 function updateUI() {
-  // Phase info
   let phaseText = '';
   if (G.phase === 'setup') phaseText = `布局阶段 (第${G.setupRound}轮 - 放置${G.setupStep === 'settlement' ? '村庄' : '道路'})`;
   else if (G.phase === 'play') {
@@ -995,12 +1613,15 @@ function updateUI() {
   } else if (G.phase === 'gameover') phaseText = '游戏结束';
   document.getElementById('phase-info').textContent = phaseText;
   
-  document.getElementById('turn-info').textContent = G.phase !== 'gameover' ? `👤 ${currentPlayer().name} 的回合` : '';
+  let cp = currentPlayer();
+  let aiTag = cp.isAI ? ' 🤖' : '';
+  document.getElementById('turn-info').textContent = G.phase !== 'gameover' ? `👤 ${cp.name}${aiTag} 的回合` : '';
   
   // Players panel
   let pp = document.getElementById('players-panel');
   pp.innerHTML = G.players.map((p, i) => {
     let isActive = i === G.currentPlayer;
+    let aiLabel = p.isAI ? ' 🤖' : '';
     let resHTML = RES.map(r => 
       `<span class="res-badge"><span class="res-icon" style="background:${RES_COLOR[r]}"></span>${p.resources[r]}</span>`
     ).join('');
@@ -1012,7 +1633,7 @@ function updateUI() {
     return `<div class="player-card ${isActive ? 'active' : ''}">
       <div class="player-header">
         <span class="player-dot" style="background:${p.color}"></span>
-        <span class="player-name">${p.name}</span>
+        <span class="player-name">${p.name}${aiLabel}</span>
         <span class="player-vp">🏆 ${p.victoryPoints}分</span>
       </div>
       <div class="player-resources">${resHTML}</div>
@@ -1020,27 +1641,32 @@ function updateUI() {
     </div>`;
   }).join('');
   
-  // Action buttons
+  // Action buttons - disable all if AI turn
   let p = currentPlayer();
   let isPlay = G.phase === 'play';
   let canBuild = isPlay && (G.turnPhase === 'postRoll' || G.turnPhase === 'build');
+  let isHumanTurn = !p.isAI;
   
-  document.getElementById('btn-roll').disabled = !(isPlay && G.turnPhase === 'roll');
-  document.getElementById('btn-road').disabled = !(canBuild && canAfford(p, COSTS.road) && G.players[G.currentPlayer].roads.length < 15);
-  document.getElementById('btn-settlement').disabled = !(canBuild && canAfford(p, COSTS.settlement) && getValidSettlementSpots(G.currentPlayer, false).length > 0);
-  document.getElementById('btn-city').disabled = !(canBuild && canAfford(p, COSTS.city) && getValidCitySpots(G.currentPlayer).length > 0);
-  document.getElementById('btn-devcard').disabled = !(canBuild && canAfford(p, COSTS.devcard) && G.devDeck.length > 0);
-  document.getElementById('btn-trade').disabled = !canBuild;
-  document.getElementById('btn-playcard').disabled = !(canBuild && p.devCards.filter(c => !G.boughtDevThisTurn.includes(c + '_' + G.boughtDevThisTurn.length)).length > 0 && !G.playedDevThisTurn);
-  document.getElementById('btn-endturn').disabled = !(canBuild);
+  document.getElementById('btn-roll').disabled = !(isPlay && G.turnPhase === 'roll' && isHumanTurn);
+  document.getElementById('btn-road').disabled = !(canBuild && isHumanTurn && canAfford(p, COSTS.road) && G.players[G.currentPlayer].roads.length < 15);
+  document.getElementById('btn-settlement').disabled = !(canBuild && isHumanTurn && canAfford(p, COSTS.settlement) && getValidSettlementSpots(G.currentPlayer, false).length > 0);
+  document.getElementById('btn-city').disabled = !(canBuild && isHumanTurn && canAfford(p, COSTS.city) && getValidCitySpots(G.currentPlayer).length > 0);
+  document.getElementById('btn-devcard').disabled = !(canBuild && isHumanTurn && canAfford(p, COSTS.devcard) && G.devDeck.length > 0);
+  document.getElementById('btn-trade').disabled = !(canBuild && isHumanTurn);
+  document.getElementById('btn-playcard').disabled = !(canBuild && isHumanTurn && p.devCards.filter(c => c !== 'victoryPoint').length > 0 && !G.playedDevThisTurn);
+  document.getElementById('btn-endturn').disabled = !(canBuild && isHumanTurn);
   
   // Setup hint
   let hint = document.getElementById('setup-hint');
   if (G.phase === 'setup') {
     hint.style.display = 'block';
-    hint.textContent = G.setupStep === 'settlement' ? 
-      `${currentPlayer().name}：请点击放置村庄` : 
-      `${currentPlayer().name}：请点击放置道路`;
+    if (currentPlayer().isAI) {
+      hint.textContent = `🤖 ${currentPlayer().name} 正在思考...`;
+    } else {
+      hint.textContent = G.setupStep === 'settlement' ? 
+        `${currentPlayer().name}：请点击放置村庄` : 
+        `${currentPlayer().name}：请点击放置道路`;
+    }
   } else if (interactionMode === 'moveRobber') {
     hint.style.display = 'block';
     hint.textContent = '请点击一个六边形来移动强盗';
@@ -1048,6 +1674,9 @@ function updateUI() {
     hint.style.display = 'block';
     let names = {placeSettlement:'放置村庄',placeRoad:'修建道路',placeCity:'升级城市'};
     hint.textContent = `请点击${names[interactionMode] || ''}（右键取消）`;
+  } else if (G.phase === 'play' && currentPlayer().isAI) {
+    hint.style.display = 'block';
+    hint.textContent = `🤖 ${currentPlayer().name} 正在行动...`;
   } else {
     hint.style.display = 'none';
   }
@@ -1081,6 +1710,9 @@ function showWinner(p) {
 // ============================================================
 
 canvas.addEventListener('mousemove', (e) => {
+  // Ignore mouse during AI turn
+  if (isCurrentPlayerAI()) return;
+  
   let rect = canvas.getBoundingClientRect();
   let mx = e.clientX - rect.left;
   let my = e.clientY - rect.top;
@@ -1091,7 +1723,6 @@ canvas.addEventListener('mousemove', (e) => {
   
   if (interactionMode === 'placeSettlement' || interactionMode === 'placeCity' || 
       (G.phase === 'setup' && G.setupStep === 'settlement')) {
-    // Find closest highlighted vertex
     let best = -1, bestDist = 15 / scale;
     highlightVertices.forEach(vi => {
       let v = G.vertices[vi];
@@ -1100,7 +1731,6 @@ canvas.addEventListener('mousemove', (e) => {
     });
     hoverVertex = best;
   } else if (interactionMode === 'placeRoad' || (G.phase === 'setup' && G.setupStep === 'road')) {
-    // Find closest highlighted edge
     let best = -1, bestDist = 12 / scale;
     highlightEdges.forEach(ei => {
       let e = G.edges[ei];
@@ -1116,6 +1746,9 @@ canvas.addEventListener('mousemove', (e) => {
 });
 
 canvas.addEventListener('click', (e) => {
+  // Ignore clicks during AI turn
+  if (isCurrentPlayerAI()) return;
+  
   let rect = canvas.getBoundingClientRect();
   let mx = e.clientX - rect.left;
   let my = e.clientY - rect.top;
@@ -1136,12 +1769,10 @@ canvas.addEventListener('click', (e) => {
       placeRoad(G.currentPlayer, hoverEdge);
       highlightEdges = [];
       
-      // Give resources in round 2
       if (G.setupRound === 2) {
         setupGiveResources(G.currentPlayer, setupLastSettlement);
       }
       
-      // Advance to next player
       advanceSetup();
       return;
     }
@@ -1161,7 +1792,6 @@ canvas.addEventListener('click', (e) => {
       log(`🥷 强盗移动到了新位置`);
       interactionMode = null;
       
-      // Check if can steal from adjacent players
       let stealTargets = new Set();
       G.tiles[best].vertices.forEach(vi => {
         let v = G.vertices[vi];
@@ -1226,7 +1856,7 @@ canvas.addEventListener('click', (e) => {
 
 canvas.addEventListener('contextmenu', (e) => {
   e.preventDefault();
-  if (interactionMode && G.phase === 'play') {
+  if (interactionMode && G.phase === 'play' && !isCurrentPlayerAI()) {
     interactionMode = null;
     highlightVertices = [];
     highlightEdges = [];
@@ -1245,25 +1875,25 @@ function advanceSetup() {
   if (G.setupRound === 1) {
     G.currentPlayer++;
     if (G.currentPlayer >= G.numPlayers) {
-      // Start round 2 (reverse)
       G.setupRound = 2;
       G.currentPlayer = G.numPlayers - 1;
     }
   } else {
     G.currentPlayer--;
     if (G.currentPlayer < 0) {
-      // Setup done, start game
       G.phase = 'play';
       G.currentPlayer = 0;
       G.turnPhase = 'roll';
       log('🎮 游戏开始！');
       updateUI();
+      triggerAIIfNeeded();
       return;
     }
   }
   
-  highlightVertices = getValidSettlementSpots(G.currentPlayer, true);
+  highlightVertices = isCurrentPlayerAI() ? [] : getValidSettlementSpots(G.currentPlayer, true);
   updateUI();
+  triggerAIIfNeeded();
 }
 
 // ============================================================
@@ -1271,13 +1901,12 @@ function advanceSetup() {
 // ============================================================
 
 document.getElementById('btn-roll').addEventListener('click', () => {
-  if (G.turnPhase !== 'roll') return;
+  if (G.turnPhase !== 'roll' || isCurrentPlayerAI()) return;
   
   let [d1, d2] = rollDice();
   let total = d1 + d2;
   G.diceRoll = total;
   
-  // Animate dice
   let die1 = document.getElementById('die1');
   let die2 = document.getElementById('die2');
   die1.textContent = d1;
@@ -1291,16 +1920,22 @@ document.getElementById('btn-roll').addEventListener('click', () => {
   log(`🎲 ${currentPlayer().name} 掷出了 ${d1} + ${d2} = ${total}`);
   
   if (total === 7) {
-    // Check for discards
-    let needDiscard = [];
+    // Handle discards - AI auto-discards, humans get modal
+    let needHumanDiscard = [];
     G.players.forEach((p, i) => {
-      if (totalResources(p) > 7) needDiscard.push(i);
+      if (totalResources(p) > 7) {
+        if (p.isAI) {
+          aiDiscard(i);
+        } else {
+          needHumanDiscard.push(i);
+        }
+      }
     });
     
-    if (needDiscard.length > 0) {
-      G.pendingDiscard = needDiscard;
+    if (needHumanDiscard.length > 0) {
+      G.pendingDiscard = needHumanDiscard;
       G.turnPhase = 'discard';
-      showDiscardModal(needDiscard[0]);
+      showDiscardModal(needHumanDiscard[0]);
     } else {
       G.turnPhase = 'robber';
       interactionMode = 'moveRobber';
@@ -1314,6 +1949,7 @@ document.getElementById('btn-roll').addEventListener('click', () => {
 });
 
 document.getElementById('btn-road').addEventListener('click', () => {
+  if (isCurrentPlayerAI()) return;
   let spots = getValidRoadSpots(G.currentPlayer, false);
   if (spots.length === 0) { toast('没有可用位置'); return; }
   interactionMode = 'placeRoad';
@@ -1322,6 +1958,7 @@ document.getElementById('btn-road').addEventListener('click', () => {
 });
 
 document.getElementById('btn-settlement').addEventListener('click', () => {
+  if (isCurrentPlayerAI()) return;
   let spots = getValidSettlementSpots(G.currentPlayer, false);
   if (spots.length === 0) { toast('没有可用位置'); return; }
   interactionMode = 'placeSettlement';
@@ -1330,6 +1967,7 @@ document.getElementById('btn-settlement').addEventListener('click', () => {
 });
 
 document.getElementById('btn-city').addEventListener('click', () => {
+  if (isCurrentPlayerAI()) return;
   let spots = getValidCitySpots(G.currentPlayer);
   if (spots.length === 0) { toast('没有可升级的村庄'); return; }
   interactionMode = 'placeCity';
@@ -1338,6 +1976,7 @@ document.getElementById('btn-city').addEventListener('click', () => {
 });
 
 document.getElementById('btn-devcard').addEventListener('click', () => {
+  if (isCurrentPlayerAI()) return;
   if (G.devDeck.length === 0) { toast('没有剩余发展卡'); return; }
   pay(currentPlayer(), COSTS.devcard);
   let card = G.devDeck.pop();
@@ -1356,10 +1995,17 @@ document.getElementById('btn-devcard').addEventListener('click', () => {
   }
 });
 
-document.getElementById('btn-trade').addEventListener('click', showTradeModal);
-document.getElementById('btn-playcard').addEventListener('click', showPlayCardModal);
+document.getElementById('btn-trade').addEventListener('click', () => {
+  if (isCurrentPlayerAI()) return;
+  showTradeModal();
+});
+document.getElementById('btn-playcard').addEventListener('click', () => {
+  if (isCurrentPlayerAI()) return;
+  showPlayCardModal();
+});
 
 document.getElementById('btn-endturn').addEventListener('click', () => {
+  if (isCurrentPlayerAI()) return;
   endTurn();
 });
 
@@ -1374,6 +2020,9 @@ function endTurn() {
   highlightEdges = [];
   log(`--- ${currentPlayer().name} 的回合 ---`);
   updateUI();
+  
+  // Trigger AI if next player is AI
+  triggerAIIfNeeded();
 }
 
 // ============================================================
@@ -1382,7 +2031,6 @@ function endTurn() {
 
 function showTradeModal() {
   let p = currentPlayer();
-  let ports = getPlayerPorts(G.currentPlayer);
   
   let html = `<h2>🤝 交易</h2>`;
   html += `<div class="trade-section"><h4>🏦 与银行交易</h4>`;
@@ -1405,25 +2053,28 @@ function showTradeModal() {
   });
   html += `</div></div></div>`;
   
-  // Player trade section
-  html += `<div class="trade-section"><h4>👥 玩家间交易</h4>`;
-  html += `<p style="font-size:0.8rem;opacity:0.7">与其他玩家面对面协商后，在此执行交换</p>`;
-  html += `<div style="display:flex;gap:12px;flex-wrap:wrap">`;
-  html += `<div><b>你给出:</b>`;
-  RES.forEach(r => {
-    html += `<div class="trade-row"><label>${RES_CN[r].slice(0,2)}</label><input type="number" min="0" max="${p.resources[r]}" value="0" id="give-${r}"></div>`;
-  });
-  html += `</div><div><b>你获得:</b>`;
-  RES.forEach(r => {
-    html += `<div class="trade-row"><label>${RES_CN[r].slice(0,2)}</label><input type="number" min="0" max="19" value="0" id="get-${r}"></div>`;
-  });
-  html += `</div></div>`;
-  html += `<div style="margin-top:8px"><b>交易对象:</b> `;
-  G.players.forEach((pl, i) => {
-    if (i === G.currentPlayer) return;
-    html += `<button class="btn" onclick="doPlayerTrade(${i})">${pl.name}</button> `;
-  });
-  html += `</div></div>`;
+  // Player trade section - only show human players
+  let humanPlayers = G.players.filter((pl, i) => i !== G.currentPlayer && !pl.isAI);
+  if (humanPlayers.length > 0) {
+    html += `<div class="trade-section"><h4>👥 玩家间交易</h4>`;
+    html += `<p style="font-size:0.8rem;opacity:0.7">与其他玩家面对面协商后，在此执行交换</p>`;
+    html += `<div style="display:flex;gap:12px;flex-wrap:wrap">`;
+    html += `<div><b>你给出:</b>`;
+    RES.forEach(r => {
+      html += `<div class="trade-row"><label>${RES_CN[r].slice(0,2)}</label><input type="number" min="0" max="${p.resources[r]}" value="0" id="give-${r}"></div>`;
+    });
+    html += `</div><div><b>你获得:</b>`;
+    RES.forEach(r => {
+      html += `<div class="trade-row"><label>${RES_CN[r].slice(0,2)}</label><input type="number" min="0" max="19" value="0" id="get-${r}"></div>`;
+    });
+    html += `</div></div>`;
+    html += `<div style="margin-top:8px"><b>交易对象:</b> `;
+    G.players.forEach((pl, i) => {
+      if (i === G.currentPlayer || pl.isAI) return;
+      html += `<button class="btn" onclick="doPlayerTrade(${i})">${pl.name}</button> `;
+    });
+    html += `</div></div>`;
+  }
   
   html += `<div class="modal-btns"><button class="btn" onclick="closeModal('modal-trade')">关闭</button></div>`;
   
@@ -1520,7 +2171,6 @@ window.doDiscard = function(playerIdx, needed) {
   
   closeModal('modal-discard');
   
-  // Check remaining discards
   G.pendingDiscard = G.pendingDiscard.filter(i => i !== playerIdx);
   if (G.pendingDiscard.length > 0) {
     showDiscardModal(G.pendingDiscard[0]);
@@ -1529,6 +2179,10 @@ window.doDiscard = function(playerIdx, needed) {
     interactionMode = 'moveRobber';
     G.justRolled7 = true;
     updateUI();
+    // If current player is AI, continue AI turn
+    if (isCurrentPlayerAI()) {
+      onDiscardComplete();
+    }
   }
 };
 
@@ -1575,10 +2229,9 @@ function showPlayCardModal() {
   let p = currentPlayer();
   let names = {knight:'🗡️ 骑士',victoryPoint:'🏆 胜利点',roadBuilding:'🛤️ 修路 (免费2条)',yearOfPlenty:'🌾 丰年 (拿2张)',monopoly:'💰 垄断'};
   
-  // Filter out cards bought this turn
   let playable = {};
   p.devCards.forEach(c => {
-    if (c === 'victoryPoint') return; // VP cards are auto-scored
+    if (c === 'victoryPoint') return;
     playable[c] = (playable[c] || 0) + 1;
   });
   
@@ -1685,23 +2338,31 @@ function closeModal(id) {
 }
 
 // ============================================================
-// INIT
+// GAME START
 // ============================================================
 
-function startGame(numPlayers) {
-  closeModal('modal-setup');
-  initGame(numPlayers);
+function startGameWithPlayers(playerDefs) {
+  initGame(playerDefs.length, playerDefs);
   resizeCanvas();
-  highlightVertices = getValidSettlementSpots(0, true);
-  log(`🎮 新游戏开始！${numPlayers} 位玩家`);
+  
+  log(`🎮 新游戏开始！${playerDefs.length} 位玩家`);
+  playerDefs.forEach((pd, i) => {
+    log(`  ${PLAYER_COLORS[i] === '#e74c3c' ? '🔴' : PLAYER_COLORS[i] === '#3498db' ? '🔵' : PLAYER_COLORS[i] === '#f39c12' ? '🟠' : '🟢'} ${pd.name} (${pd.type === 'ai' ? '电脑' : '人类'})`);
+  });
   log(`--- ${currentPlayer().name} 的回合 (布局) ---`);
+  
+  if (!isCurrentPlayerAI()) {
+    highlightVertices = getValidSettlementSpots(0, true);
+  }
   updateUI();
+  triggerAIIfNeeded();
 }
 
 window.addEventListener('resize', resizeCanvas);
 
-// Show setup modal
+// Show setup modal and initialize player count
 document.getElementById('modal-setup').classList.add('show');
+setPlayerCount(4);
 </script>
 </body>
 </html>
