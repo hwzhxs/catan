@@ -1529,29 +1529,94 @@ function render() {
     let s2 = toScreen(G.vertices[e.v2].x, G.vertices[e.v2].y);
     
     if (e.road !== -1) {
-      // Road shadow
-      ctx.strokeStyle = 'rgba(0,0,0,0.3)';
-      ctx.lineWidth = 9;
-      ctx.lineCap = 'round';
-      ctx.beginPath();
-      ctx.moveTo(s1.x + 1, s1.y + 2);
-      ctx.lineTo(s2.x + 1, s2.y + 2);
-      ctx.stroke();
-      // Road border
-      ctx.strokeStyle = shadeColor(G.players[e.road].color, -30);
-      ctx.lineWidth = 8;
-      ctx.beginPath();
-      ctx.moveTo(s1.x, s1.y);
-      ctx.lineTo(s2.x, s2.y);
-      ctx.stroke();
-      // Road fill
-      ctx.strokeStyle = G.players[e.road].color;
-      ctx.lineWidth = 5;
-      ctx.beginPath();
-      ctx.moveTo(s1.x, s1.y);
-      ctx.lineTo(s2.x, s2.y);
-      ctx.stroke();
-      ctx.lineCap = 'butt';
+      // 3D Road rendering
+      let dx = s2.x - s1.x, dy = s2.y - s1.y;
+      let len = Math.sqrt(dx*dx + dy*dy);
+      if (len < 1) { /* skip zero-length */ } else {
+        let nx = -dy / len, ny = dx / len; // perpendicular
+        let roadW = 5; // half-width
+        let roadH = 4; // 3D height offset
+        let baseColor = G.players[e.road].color;
+        let darkColor = shadeColor(baseColor, -40);
+        let lightColor = shadeColor(baseColor, 30);
+        
+        // Top-left / top-right / bottom-left / bottom-right of road surface
+        let tl = {x: s1.x + nx*roadW, y: s1.y + ny*roadW};
+        let tr = {x: s2.x + nx*roadW, y: s2.y + ny*roadW};
+        let bl = {x: s1.x - nx*roadW, y: s1.y - ny*roadW};
+        let br = {x: s2.x - nx*roadW, y: s2.y - ny*roadW};
+        
+        // Shadow beneath
+        ctx.save();
+        ctx.fillStyle = 'rgba(0,0,0,0.25)';
+        ctx.beginPath();
+        ctx.moveTo(bl.x + 2, bl.y + roadH + 2);
+        ctx.lineTo(br.x + 2, br.y + roadH + 2);
+        ctx.lineTo(tr.x + 2, tr.y + 2);
+        ctx.lineTo(tl.x + 2, tl.y + 2);
+        ctx.closePath();
+        ctx.fill();
+        ctx.restore();
+        
+        // Side face (3D extrusion) — bottom edge side
+        ctx.fillStyle = darkColor;
+        ctx.beginPath();
+        ctx.moveTo(bl.x, bl.y);
+        ctx.lineTo(br.x, br.y);
+        ctx.lineTo(br.x, br.y + roadH);
+        ctx.lineTo(bl.x, bl.y + roadH);
+        ctx.closePath();
+        ctx.fill();
+        
+        // Side face — right end cap
+        ctx.fillStyle = shadeColor(baseColor, -25);
+        ctx.beginPath();
+        ctx.moveTo(br.x, br.y);
+        ctx.lineTo(tr.x, tr.y);
+        ctx.lineTo(tr.x, tr.y + roadH);
+        ctx.lineTo(br.x, br.y + roadH);
+        ctx.closePath();
+        ctx.fill();
+        
+        // Top surface
+        ctx.fillStyle = baseColor;
+        ctx.beginPath();
+        ctx.moveTo(tl.x, tl.y);
+        ctx.lineTo(tr.x, tr.y);
+        ctx.lineTo(br.x, br.y);
+        ctx.lineTo(bl.x, bl.y);
+        ctx.closePath();
+        ctx.fill();
+        
+        // Top surface highlight (wood plank lines)
+        ctx.strokeStyle = lightColor;
+        ctx.lineWidth = 1;
+        ctx.globalAlpha = 0.4;
+        let planks = 5;
+        for (let p = 1; p < planks; p++) {
+          let t = p / planks;
+          let px1 = tl.x + (bl.x - tl.x) * t;
+          let py1 = tl.y + (bl.y - tl.y) * t;
+          let px2 = tr.x + (br.x - tr.x) * t;
+          let py2 = tr.y + (br.y - tr.y) * t;
+          ctx.beginPath();
+          ctx.moveTo(px1, py1);
+          ctx.lineTo(px2, py2);
+          ctx.stroke();
+        }
+        ctx.globalAlpha = 1.0;
+        
+        // Border outline
+        ctx.strokeStyle = darkColor;
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.moveTo(tl.x, tl.y);
+        ctx.lineTo(tr.x, tr.y);
+        ctx.lineTo(br.x, br.y);
+        ctx.lineTo(bl.x, bl.y);
+        ctx.closePath();
+        ctx.stroke();
+      }
     }
     if (highlightEdges.includes(ei)) {
       ctx.strokeStyle = ei === hoverEdge ? 'rgba(255,255,255,0.8)' : 'rgba(255,255,255,0.3)';
