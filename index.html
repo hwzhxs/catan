@@ -1759,20 +1759,22 @@ function drawHex(cx, cy, size, tile, ti) {
     ctx.beginPath();
     ctx.arc(cx + 1, cy + 2, r, 0, Math.PI * 2);
     ctx.fill();
-    // Token bg gradient
+    // Token bg gradient - match tile color
+    let tokenColors = {wood:['#1a4d2e','#0f3320'],brick:['#6b2a1a','#4a1a0e'],sheep:['#2a5a2a','#1a3d1a'],wheat:['#7a5a10','#5a4008'],ore:['#3a3a4a','#252535'],desert:['#8a7040','#6a5530']};
+    let tc = tokenColors[tile.type] || ['#4a3a20','#3a2a15'];
     let tGrad = ctx.createRadialGradient(cx - r*0.3, cy - r*0.3, 0, cx, cy, r);
-    tGrad.addColorStop(0, '#fefaf0');
-    tGrad.addColorStop(1, '#e8dcc0');
+    tGrad.addColorStop(0, tc[0]);
+    tGrad.addColorStop(1, tc[1]);
     ctx.fillStyle = tGrad;
     ctx.beginPath();
     ctx.arc(cx, cy, r, 0, Math.PI * 2);
     ctx.fill();
     let isHot = tile.number === 6 || tile.number === 8;
-    ctx.strokeStyle = isHot ? '#c0392b' : '#8b7355';
+    ctx.strokeStyle = isHot ? '#ff6b4a' : 'rgba(255,255,255,0.3)';
     ctx.lineWidth = isHot ? 2.5 : 1.5;
     ctx.stroke();
     // Number
-    ctx.fillStyle = isHot ? '#c0392b' : '#333';
+    ctx.fillStyle = isHot ? '#ff6b4a' : '#f0e8d0';
     ctx.font = `bold ${Math.max(14, s * 0.3)}px serif`;
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
@@ -1782,7 +1784,7 @@ function drawHex(cx, cy, size, tile, ti) {
     let nd = dots[tile.number] || 0;
     let dotY = cy + r * 0.55;
     for (let d = 0; d < nd; d++) {
-      ctx.fillStyle = isHot ? '#c0392b' : '#8b7355';
+      ctx.fillStyle = isHot ? '#ff6b4a' : 'rgba(240,232,208,0.7)';
       ctx.beginPath();
       ctx.arc(cx - (nd-1)*2.5 + d*5, dotY, 2, 0, Math.PI*2);
       ctx.fill();
