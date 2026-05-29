@@ -1459,50 +1459,7 @@ function render() {
   
   let size = G.hexSize;
   
-  // Ocean hex behind the board
-  let centerTile = G.tiles[9];
-  if (centerTile) {
-    let cs = toScreen(centerTile.px, centerTile.py);
-    let oceanR = size * scale * 4.8;
-    
-    // Draw ocean using tile image if available
-    let oceanImg = tileImgCache['ocean'];
-    if (oceanImg) {
-      ctx.save();
-      drawHexPath(cs.x, cs.y, oceanR);
-      ctx.clip();
-      // Tile the ocean image across the background
-      let imgSize = oceanR * 2;
-      ctx.drawImage(oceanImg, cs.x - imgSize/2, cs.y - imgSize/2, imgSize, imgSize);
-      // Subtle wave overlay
-      let oGrad = ctx.createRadialGradient(cs.x, cs.y - oceanR*0.1, oceanR*0.2, cs.x, cs.y, oceanR);
-      oGrad.addColorStop(0, 'rgba(100,180,220,0.05)');
-      oGrad.addColorStop(0.7, 'rgba(50,100,160,0.1)');
-      oGrad.addColorStop(1, 'rgba(30,70,120,0.2)');
-      ctx.fillStyle = oGrad;
-      ctx.fillRect(cs.x - oceanR, cs.y - oceanR, oceanR*2, oceanR*2);
-      ctx.restore();
-    } else {
-      // Fallback: solid gradient ocean
-      let oGrad = ctx.createRadialGradient(cs.x, cs.y - oceanR*0.1, oceanR*0.2, cs.x, cs.y, oceanR);
-      oGrad.addColorStop(0, '#6da7cc');
-      oGrad.addColorStop(0.4, '#5a8db8');
-      oGrad.addColorStop(0.7, '#4a7da8');
-      oGrad.addColorStop(1, '#3a6d98');
-      ctx.fillStyle = oGrad;
-      drawHexPath(cs.x, cs.y, oceanR);
-      ctx.fill();
-    }
-    // Ocean border
-    ctx.strokeStyle = '#2a5070';
-    ctx.lineWidth = 4;
-    drawHexPath(cs.x, cs.y, oceanR);
-    ctx.stroke();
-    ctx.strokeStyle = 'rgba(255,255,255,0.1)';
-    ctx.lineWidth = 1.5;
-    drawHexPath(cs.x, cs.y, oceanR * 0.995);
-    ctx.stroke();
-  }
+  // Ocean background removed
   
   G.tiles.forEach((t, ti) => {
     let center = toScreen(t.px, t.py);
