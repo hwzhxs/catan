@@ -1658,7 +1658,7 @@ function render() {
 const TILE_TYPE_TO_IMG = {wood:'forest',brick:'brick',sheep:'sheep',wheat:'wheat',ore:'ore',desert:'desert'};
 
 function drawHex(cx, cy, size, tile, ti) {
-  let s = size * 0.98;
+  let s = size;
   
   // Draw hex path for clipping
   ctx.save();
