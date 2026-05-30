@@ -1699,14 +1699,9 @@ function drawHex(cx, cy, size, tile, ti) {
   ctx.restore();
   
   // Hex border
-  ctx.strokeStyle = 'rgba(0,0,0,0.5)';
-  ctx.lineWidth = 3;
+  ctx.strokeStyle = 'rgba(0,0,0,0.6)';
+  ctx.lineWidth = 2;
   drawHexPath(cx, cy, s);
-  ctx.stroke();
-  // Inner highlight
-  ctx.strokeStyle = 'rgba(255,255,255,0.12)';
-  ctx.lineWidth = 1;
-  drawHexPath(cx, cy, s * 0.96);
   ctx.stroke();
   
   // Number token (centered)
