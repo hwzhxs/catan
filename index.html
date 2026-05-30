@@ -1677,7 +1677,7 @@ function drawHex(cx, cy, size, tile, ti) {
   let img = tileImgCache[imgKey];
   if (img) {
     // Fill background color matching tile type to hide JPEG white edges
-    let bgColors = {wood:'#2d6b3f',brick:'#8b4513',sheep:'#4a7c4a',wheat:'#b8860b',ore:'#4a4a5a',desert:'#c4a265'};
+    let bgColors = {wood:'#2d6b3f',brick:'#8b4513',sheep:'#4a7c4a',wheat:'#b8860b',ore:'#4a4a5a',desert:'#c4a265',ocean:'#1a5276'};
     ctx.fillStyle = bgColors[tile.type] || '#6b5b3a';
     ctx.fill();
     ctx.drawImage(img, cx - s, cy - s, s * 2, s * 2);
