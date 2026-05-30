@@ -1680,7 +1680,8 @@ function drawHex(cx, cy, size, tile, ti) {
     let bgColors = {wood:'#2d6b3f',brick:'#8b4513',sheep:'#4a7c4a',wheat:'#b8860b',ore:'#4a4a5a',desert:'#c4a265',ocean:'#1a5276'};
     ctx.fillStyle = bgColors[tile.type] || '#6b5b3a';
     ctx.fill();
-    ctx.drawImage(img, cx - s, cy - s, s * 2, s * 2);
+    let imgS = s * 1.05;
+    ctx.drawImage(img, cx - imgS, cy - imgS, imgS * 2, imgS * 2);
   } else {
     // Fallback to solid color
     let colors = {wood:'#2d8a4e',brick:'#c0392b',sheep:'#8ed98e',wheat:'#daa520',ore:'#6d7b8d',desert:'#d4b896'};
